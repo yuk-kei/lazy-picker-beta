@@ -14,7 +14,7 @@ class RenderScreen(threading.Thread):
             # Do your rendering here
             refresh()
             self.func()
-            time.sleep(0.2)
+            # time.sleep(0.2)
 
     def stop(self):
         self.running = False
@@ -45,3 +45,37 @@ def print_banner():
     print("  ▐                              ▐         ▐         ▐       ▐ ▐        ▐        ▐            ")
     print("--------------------------------------------------------------------------------------------------------")
     print()
+
+
+def waiting():
+    """ Used to print the waiting screen."""
+    print("Loading...")
+    frames = ["""
+    -----
+    |   |
+    | * |
+    |   |
+    -----
+    """, """
+    -----
+    | * |
+    |   |
+    |   |
+    -----
+    """, """
+    -----
+    |   |
+    |   |
+    | * |
+    -----
+    """, """
+    -----
+    |   |
+    |   |
+    | * |
+    -----
+    """]
+
+    for frame in frames:
+        print(frame)
+        time.sleep(0.2)

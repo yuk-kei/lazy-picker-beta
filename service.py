@@ -1,33 +1,11 @@
 import copy
-import math
 
-from enum import Enum
-
-from data import Algorithm
-from tsp_algo import Vertex, Edge, Branch_n_Bound
-from visualize import refresh, print_banner
+from data import Algorithm, NodeState
+from tsp_algo import Vertex, Edge, Branch_n_Bound, DummyGreedy
+from visualize import print_banner, refresh
 
 # Heuristic factor Constant
 FACTOR = 1
-
-
-class NodeState(Enum):
-    """
-    An enumeration of the different states that a node can be in;
-    0: GOAL, represents the target node(the target item); 1: NEW, represents a node that has not been visited;
-    2: OPEN, represents a node in the open list(will be visited in the future);
-    3: BLOCK, represents a node that is a shelf; 4: PATH, represents a node that is in the path to the target node;
-    5: CLOSE, represents a node that has been visited; 6: START, represents the starting node(worker start position)
-    """
-
-    TARGET = 0
-    NEW = 1
-    OPEN = 2
-    BLOCK = 3
-    PATH = 4
-    CLOSE = 5
-    START = 6
-    STOP = 7
 
 
 class Block:
@@ -112,6 +90,9 @@ class Block:
         return str(self.pos)
 
 
+
+
+
 class Map:
     """A class to represent the map of the warehouse."""
 
@@ -138,6 +119,7 @@ class Map:
 
         # Initialize the map component, don't touch this
         self.total_path = []
+        self.total_path_description = []
         self.target_blocks = []
 
         for i in range(self.map_row):
@@ -162,19 +144,19 @@ class Map:
         self.closed_list = []
         self.path = []
         self.iteration = 0
+        self.total_length = 0
         self.has_path = False
         self.all_target_nodes = []
         self.adjacency_map = None
 
     def init_for_tsp(self):
-        if len(self.target_blocks) > 1:
-            self.all_target_nodes = self.set_target_entrances()
-            print("initial target nodes successfully")
-            for target in self.all_target_nodes:
-                print(target)
-            self.adjacency_map = self.set_adjacency_map(self.all_target_nodes)
+        self.all_target_nodes = self.set_target_entrances()
+        # print("initial target nodes successfully")
+        # for target in self.all_target_nodes:
+        #     print(target)
+        self.adjacency_map = self.set_adjacency_map(self.all_target_nodes)
 
-            print("initial adjacency map successfully")
+        # print("initial adjacency map successfully")
 
     def test_basic_tsp(self):
         """
@@ -234,12 +216,15 @@ class Map:
         A function to set the state of the nodes in the target entrances to TARGET.
         """
         entrances = []
-        start = Vertex(self.start_block)
+        index = 0
+        start = Vertex(self.start_block, 0)
         entrances.append(start)
+
         for node in self.target_blocks:
             for block in self.get_neighbours(node):
                 if block.state != NodeState.TARGET:
-                    entrance = Vertex(block, node)
+                    index += 1
+                    entrance = Vertex(block, index, node)
                     entrances.append(entrance)
 
         return entrances
@@ -256,20 +241,35 @@ class Map:
             for j in range(len(all_path_nodes)):
                 if i != j and all_path_nodes[i].is_entrance_of != all_path_nodes[j].is_entrance_of:
                     path = self.find_single_target(all_path_nodes[i].block, all_path_nodes[j].block)
-                    path_description = self.set_path_description(path)
+                    path_description = set_path_description(path)
                     edge = Edge(all_path_nodes[i], all_path_nodes[j], path, path_description)
                 else:
                     edge = None
 
                 adjacency_map[i][j] = edge
-
+        self.reset_map()
         return adjacency_map
 
-    def tsp(self):
-        self.init_for_tsp()
-        branch_and_bound = Branch_n_Bound(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1)
-        branch_and_bound.set_matrix()
-        branch_and_bound.get_path()
+    def tsp(self, algorithm="branch_and_bound"):
+        # self.init_for_tsp()
+        if algorithm == "branch_and_bound":
+            branch_and_bound = Branch_n_Bound(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1)
+            branch_and_bound.set_matrix()
+            self.total_path, self.total_path_description, self.total_length = branch_and_bound.solve()
+        elif algorithm == "dummy_greedy":
+            dummy_greedy = DummyGreedy(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1)
+            self.total_path, self.total_path_description, self.total_length = dummy_greedy.solver()
+
+        refresh()
+        self.set_total_path_state()
+        self.print_map()
+        print_path_descriptions(self.total_path_description, self.total_length)
+        print("If you want to dump the result to a .txt file, press 'd', press other keys and enter to continue.")
+        if input() == "d":
+            self.dump_instruction_into_file()
+        else:
+            pass
+        return self.total_path, self.total_path_description
 
     def a_star(self, curr_start, curr_target):
         """
@@ -552,7 +552,7 @@ class Map:
         self.has_path = True
         if curr.state != NodeState.TARGET:
             curr.state = NodeState.PATH
-
+        self.path = [curr]
         # Start from the target and reach the start node recursively
         while curr.parent is not None:
             curr = curr.parent
@@ -573,8 +573,8 @@ class Map:
         """
 
         for node in self.total_path:
-            node.state = NodeState.PATH
-            self.grid[node.x][node.y].state = NodeState.PATH
+            if self.grid[node.x][node.y].state != NodeState.STOP and self.grid[node.x][node.y].state != NodeState.START:
+                self.grid[node.x][node.y].state = node.state
 
     def get_neighbours(self, curr):
         """
@@ -586,7 +586,7 @@ class Map:
         """
 
         # North, West, East, South
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
         neighbours = []
 
         # Check all the neighbours of the current node
@@ -600,7 +600,7 @@ class Map:
 
         return neighbours
 
-    def print_map_tsp(self):
+    def print_map(self):
         print_banner()
 
         for y in range(self.map_col - 1, -1, -1):
@@ -615,6 +615,8 @@ class Map:
             for x in range(self.map_row):
                 if self.grid[x][y].state == NodeState.TARGET:
                     print("\U0001F3AF", end=" ")
+                elif self.grid[x][y].state == NodeState.STOP:
+                    print("\U0001F535", end=" ")
                 elif self.grid[x][y].state == NodeState.START:
                     print("\U0001F680", end=" ")
                 elif self.grid[x][y].state == NodeState.BLOCK:
@@ -622,8 +624,7 @@ class Map:
                 elif self.grid[x][y].state == NodeState.PATH:
                     print("\U0001F7E9", end=" ")
                     # print("\U0001F7E9", end=" ")
-                elif self.grid[x][y].state == NodeState.STOP:
-                    print("\U0001F50E", end=" ")
+
                 else:
                     print("\U0001F518", end=" ")
                     # print("\U0001F535", end=" ")
@@ -705,71 +706,161 @@ class Map:
         #     sleep(refresh_rate)
         #     refresh()
 
-    def set_path_description(self, path):
-        """A function to print the text path description.
-        The function will first check whether the path is found.
-        If the path is found, then the function will print the path length and the number of iterations.
-        Then the function will record each direction of the current node to the bext node.
-        The text path description will be reconstructed by the recorded directions.
-        Use two pointers to implement the reconstruction, one pointer points to the current direction,
-        if the next direction is the same as the current direction, then the pointer will move to the next direction.
-        If the next direction is different from the current direction, then the pointer will stop and record how many
-        times the current direction appears and add the text description to the path description list.
-        Then the two pointer will move to the next direction.
+    def dump_instruction_into_file(self):
+        """A function to dump the instruction into a file.
+        The file will be named as "instruction.txt".
+        The file will be saved in the same directory as the main.py file.
         """
+        with open("instruction.txt", "w", encoding='utf-8') as file:
+            # Print the map
+            file.write("\n")
+            file.write(
+                "--------------------------------------------------------------------------------------------------------")
+            file.write("\n")
+            file.write(
+                "▄▀▀▀▀▄      ▄▀▀█▄   ▄▀▀▀▀▄   ▄▀▀▄ ▀▀▄      ▄▀▀▄▀▀▀▄  ▄▀▀█▀▄    ▄▀▄▄▄▄   ▄▀▀▄ █  ▄▀▀█▄▄▄▄  ▄▀▀▄▀▀▀▄")
+            file.write("\n")
+            file.write(
+                "█    █      ▐ ▄▀ ▀▄ █     ▄▀ █   ▀▄ ▄▀     █   █   █ █   █  █  █ █    ▌ █  █ ▄▀ ▐  ▄▀   ▐ █   █   █")
+            file.write("\n")
+            file.write(
+                "▐    █        █▄▄▄█ ▐ ▄▄▀▀   ▐     █       ▐  █▀▀▀▀  ▐   █  ▐  ▐ █      ▐  █▀▄    █▄▄▄▄▄  ▐  █▀▀█▀ ")
+            file.write("\n")
+            file.write(
+                "    █        ▄▀   █   █            █          █          █       █        █   █   █    ▌   ▄▀    █ ")
+            file.write("\n")
+            file.write(
+                "  ▄▀▄▄▄▄▄▄▀ █   ▄▀     ▀▄▄▄▄▀    ▄▀         ▄▀        ▄▀▀▀▀▀▄   ▄▀▄▄▄▄▀ ▄▀   █   ▄▀▄▄▄▄   █     █ ")
+            file.write("\n")
+            file.write(
+                "  █         ▐   ▐          ▐     █         █         █       █ █     ▐  █    ▐   █    ▐   ▐     ▐ ")
+            file.write("\n")
+            file.write("  ▐                              ▐         ▐         ▐       ▐ ▐        ▐        ▐            ")
+            file.write("\n")
+            file.write(
+                "--------------------------------------------------------------------------------------------------------")
+            file.write("\n")
+            for y in range(self.map_col - 1, -1, -1):
+                # Print the y-axis index
+                # if the y-axis index is less than 10, then print the index with 2 spaces
+                if 0 <= y < 10:
+                    file.write(str(y) + "  ")
+                # if the y-axis index is more than 10, then print the index with 1 space
+                elif y >= 10:
+                    file.write(str(y) + " ")
+                # Print the map content
+                for x in range(self.map_row):
+                    if self.grid[x][y].state == NodeState.TARGET:
+                        file.write("\U0001F3AF" + " ")
+                    elif self.grid[x][y].state == NodeState.STOP:
+                        file.write("\U0001F535" + " ")
+                    elif self.grid[x][y].state == NodeState.START:
+                        file.write("\U0001F680" + " ")
+                    elif self.grid[x][y].state == NodeState.BLOCK:
+                        file.write("\U0001F6AA" + " ")
+                    elif self.grid[x][y].state == NodeState.PATH:
+                        file.write("\U0001F7E9" + " ")
+                        # print("\U0001F7E9", end=" ")
 
-        if self.has_path:
-
-            # print(f"Number of iterations: {self.iteration}")
-
-            pre_x = self.path[0].x
-            pre_y = self.path[0].y
-
-            path_words = []
-            # Record the direction of the current node to the next node
-            for i in range(1, len(path)):
-                curr_x = self.path[i].x
-                curr_y = self.path[i].y
-                if curr_x == pre_x:  # Vertical
-                    if curr_y > pre_y:
-                        path_words.append("UP")
                     else:
-                        path_words.append("DOWN")
-                else:
-                    if curr_x > pre_x:  # Horizontal
-                        path_words.append("RIGHT")
-                    else:
-                        path_words.append("LEFT")
-                pre_x = curr_x
-                pre_y = curr_y
-            sentence = "From " + str(path[0].pos) + " to " + str(path[-1].pos) + ": "
-            path_description = [sentence]
+                        file.write("\U0001F518" + " ")
+                        # print("\U0001F535", end=" ")
+                file.write("\n")
+            # Print the x-axis index
+            for i in range(self.map_row + 1):
+                # Empty space for the left bottom corner
+                if i == 0:
+                    file.write("  ")
+                # Print the x-axis index
+                elif 0 < i < 10:
+                    file.write(str(i - 1) + "  ")
+                elif i >= 10:
+                    file.write(str(i - 1) + " ")
+            file.write("\n")
+            file.write("\n")
+            file.write("'\U0001F680': is the start point, '\U0001F3AF': is the target item, '\U0001F7E9' is the path, "
+                       "'\U0001F6AA' is the shelf location, '\U0001F518' is the empty space ")
 
-            # Reconstruct the text description
-            step = 1
-            i = 0
+            file.write("\n")
+            for instruction in self.total_path_description:
+                for sentence in instruction:
+                    file.write("\n")
+                    file.write(sentence)
+                file.write("\n")
 
-            while i < len(path_words):
-                freq = 0
-                j = i
 
-                if path_words[i] == path_words[j]:
-                    # If the next direction is the same as the current direction, j pointer move to the next direction.
-                    while j < len(path_words) and path_words[i] == path_words[j]:
-                        freq += 1
-                        j += 1
-                    # Stop and record how many times the current direction appears.
-                    sentence = "   - " + "Step " + str(step) + ": Go " + path_words[i] + " " + str(freq) + " units."
-                    # Move i pointer to the j pointer position.
-                    i = j
-                else:
-                    # If the next direction is different from the current direction, record the current direction.
-                    sentence = "   - " + "Step " + str(step) + ": Go " + path_words[i] + " " + str(freq) + " units."
-                    # Move i and j pointer to the next direction.
-                    i += 1
+def set_path_description(path):
+    """A function to print the text path description.
+    The function will first check whether the path is found.
+    If the path is found, then the function will print the path length and the number of iterations.
+    Then the function will record each direction of the current node to the bext node.
+    The text path description will be reconstructed by the recorded directions.
+    Use two pointers to implement the reconstruction, one pointer points to the current direction,
+    if the next direction is the same as the current direction, then the pointer will move to the next direction.
+    If the next direction is different from the current direction, then the pointer will stop and record how many
+    times the current direction appears and add the text description to the path description list.
+    Then the two pointer will move to the next direction.
+    """
 
-                # Add the text description to the path description list
-                step += 1
-                path_description.append(sentence)
+    pre_x = path[0].x
+    pre_y = path[0].y
 
-            return path_description
+    path_words = []
+    # Record the direction of the current node to the next node
+    for i in range(1, len(path)):
+        curr_x = path[i].x
+        curr_y = path[i].y
+        if curr_x == pre_x:  # Vertical
+            if curr_y > pre_y:
+                path_words.append("UP")
+            else:
+                path_words.append("DOWN")
+        else:
+            if curr_x > pre_x:  # Horizontal
+                path_words.append("RIGHT")
+            else:
+                path_words.append("LEFT")
+        pre_x = curr_x
+        pre_y = curr_y
+    sentence = "From " + str(path[0].pos) + " to " + str(path[-1].pos) + ": " + "length: " + str(len(path) - 1)
+    path_description = [sentence]
+
+    # Reconstruct the text description
+    step = 1
+    i = 0
+
+    while i < len(path_words):
+        freq = 0
+        j = i
+
+        if path_words[i] == path_words[j]:
+            # If the next direction is the same as the current direction, j pointer move to the next direction.
+            while j < len(path_words) and path_words[i] == path_words[j]:
+                freq += 1
+                j += 1
+            # Stop and record how many times the current direction appears.
+            sentence = "   - " + "Step " + str(step) + ": Go " + path_words[i] + " " + str(freq) + " units."
+            # Move i pointer to the j pointer position.
+            i = j
+        else:
+            # If the next direction is different from the current direction, record the current direction.
+            sentence = "   - " + "Step " + str(step) + ": Go " + path_words[i] + " " + str(freq) + " units."
+            # Move i and j pointer to the next direction.
+            i += 1
+
+        # Add the text description to the path description list
+        step += 1
+        path_description.append(sentence)
+
+    return path_description
+
+
+def print_path_descriptions(total_path_descriptions, total_path):
+    """A function to print the text path description.
+    The function will print the text path description for each path.
+    """
+    print("The path length is: ", total_path)
+    for description in total_path_descriptions:
+        for sentence in description:
+            print(sentence)
+        print()

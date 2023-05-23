@@ -1,9 +1,10 @@
 import sys
+from time import sleep
 
 from data import Algorithm, MapData
 from entities import Item, Shelf, Worker
 from service import Map
-from visualize import refresh, print_banner, RenderScreen
+from visualize import refresh, print_banner, RenderScreen, waiting
 
 
 def read_map_data(filename):
@@ -170,7 +171,6 @@ def set_target_id_once(items_map):
     return target_items
 
 
-
 def initialize_data():
     """
     The initialize_data function reads the data from the database file to get the items and shelves,
@@ -213,7 +213,6 @@ def set_targets_one_by_one(items_map):
 
 
 def set_targets(items):
-
     print("Do you want to set multiple targets one by one? (y/n)")
     items_map = {items[i].item_id: items[i] for i in range(len(items))}
     while True:
@@ -225,6 +224,7 @@ def set_targets(items):
             return set_target_id_once(items_map)
         else:
             print("Invalid input")
+
 
 def display_welcome():
     """ Displays the welcome screen for the program.
@@ -266,14 +266,21 @@ def find_path(map_data):
 
     refresh()
     map_service = Map(map_data)
-    map_service.print_map_tsp()
+    render = RenderScreen(waiting)
+    render.start()
+    map_service.init_for_tsp()
+    render.stop()
+    sleep(1)
+    refresh()
+    map_service.print_map()
 
     while True:
+
         print('-------------------------------------------------------------------------------------------------------')
         print()
         print("Welcome to the lazy picker for warehouse!")
-        print("Press '1' to find path faster(using A *), '2' to find the shortest path(using BFS),")
-        print("'3' to find the shortest path in another way(using Dijkstra), '4' to find a longer path(using DFS).")
+        print("Press '1' to find a short path(using Branch and Bound), '2' to find the path faster (using Dummy "
+              "Greedy),")
         print("Press 'r' to return to the main menu")
         print()
         print('-------------------------------------------------------------------------------------------------------')
@@ -283,17 +290,10 @@ def find_path(map_data):
         if choice == '1':
             # render = RenderScreen(map_service.print_map_single_search)
             # render.start()
-            map_service.test_basic_tsp()
-
+            map_service.tsp("branch_and_bound")
 
         elif choice == '2':
-            map_service.bfs()
-
-        elif choice == '3':
-            map_service.dijkstra()
-
-        elif choice == '4':
-            map_service.dfs()
+            map_service.tsp("dummy_greedy")
 
         elif choice == 'r':
             display_menu(map_data)
@@ -302,6 +302,7 @@ def find_path(map_data):
             print('Invalid input')
 
         map_service = Map(map_data)
+        map_service.init_for_tsp()
 
 
 def setting(map_data):

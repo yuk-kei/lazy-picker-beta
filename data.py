@@ -85,3 +85,22 @@ class MapData:
             "shelves": json.dumps(self.shelves, default=lambda o: o.toJSON(), indent=4),
             "items": json.dumps(self.items, default=lambda o: o.toJSON(), indent=4)
         }
+
+
+class NodeState(Enum):
+    """
+    An enumeration of the different states that a node can be in;
+    0: GOAL, represents the target node(the target item); 1: NEW, represents a node that has not been visited;
+    2: OPEN, represents a node in the open list(will be visited in the future);
+    3: BLOCK, represents a node that is a shelf; 4: PATH, represents a node that is in the path to the target node;
+    5: CLOSE, represents a node that has been visited; 6: START, represents the starting node(worker start position)
+    """
+
+    TARGET = 0
+    NEW = 1
+    OPEN = 2
+    BLOCK = 3
+    PATH = 4
+    CLOSE = 5
+    START = 6
+    STOP = 7
