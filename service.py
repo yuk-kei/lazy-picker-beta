@@ -107,6 +107,7 @@ class Map:
         self.targets = map_data.targets
         self.map_row = map_data.map_row
         self.map_col = map_data.map_col
+        self.algorithm_type = map_data.algorithm
 
         # All the map component are down here, use this to implement the algorithm
         self.grid = [[Block(i, j) for j in range(self.map_col)] for i in range(self.map_row)]
@@ -116,6 +117,8 @@ class Map:
         for shelf in self.shelves:
             if shelf.pos in list(map(lambda x: x.pos, self.targets)):
                 self.target_shelves.append(shelf)
+        # for target in self.target_shelves:
+        #     print(target.pos)
 
         # Initialize the map component, don't touch this
         self.total_path = []
@@ -162,21 +165,20 @@ class Map:
         """
         Test the basic TSP algorithm.
         """
-        print(self.target_blocks)
         for target in self.target_blocks:
             self.find_single_target(start=self.current_block, target=target)
 
         self.set_total_path_state()
         # self.print_map_tsp()
 
-    def find_single_target(self, start=None, target=None, algorithm=Algorithm.A_STAR):
+    def find_single_target(self, start=None, target=None):
         """
         Find the shortest path to a single target.
 
         :return: A list of nodes representing the path from the worker to the target.
         """
         self.reset_map()
-
+        algorithm = self.algorithm_type
         # Reset the map
         if start is None:
             curr = self.start_block
@@ -221,6 +223,7 @@ class Map:
         entrances.append(start)
 
         for node in self.target_blocks:
+            # print(node)
             for block in self.get_neighbours(node):
                 if block.state != NodeState.TARGET:
                     index += 1
@@ -241,7 +244,11 @@ class Map:
             for j in range(len(all_path_nodes)):
                 if i != j and all_path_nodes[i].is_entrance_of != all_path_nodes[j].is_entrance_of:
                     path = self.find_single_target(all_path_nodes[i].block, all_path_nodes[j].block)
+                    # print(all_path_nodes[i].block.pos, all_path_nodes[j].block.pos)
                     path_description = set_path_description(path)
+                    # print(path_description[0])
+                    # for sentence in path_description:
+                    #     print(sentence)
                     edge = Edge(all_path_nodes[i], all_path_nodes[j], path, path_description)
                 else:
                     edge = None

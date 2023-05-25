@@ -147,6 +147,9 @@ def set_target_id_once(items_map):
     print("separate each id by a comma, for example: 1,2,3")
     print("(If you forgot the id, you can press 'p' to see all the items' information)")
     user_input = input()
+    if user_input == "p":
+        peek_items(items_map)
+        return set_target_id_once(items_map)
     target_items = []
     count = 0
     target_list = user_input.split(",")
@@ -197,9 +200,12 @@ def set_targets_one_by_one(items_map):
     while True:
         print()
         print("Please enter each target items' ID, then press 'enter', if you are done, press 'q' to quit")
+        print("(If you forgot the id, you can press 'p' to see all the items' information)")
         curr = input()
         if curr == "q":
             return target_items
+        elif curr == "p":
+            peek_items(list(items_map.values()))
         elif curr.isnumeric():
             converted_id = int(curr)
             if converted_id in items_map:
@@ -291,18 +297,32 @@ def find_path(map_data):
             # render = RenderScreen(map_service.print_map_single_search)
             # render.start()
             map_service.tsp("branch_and_bound")
+            to_be_continue(map_data, map_service)
 
         elif choice == '2':
             map_service.tsp("dummy_greedy")
+            to_be_continue(map_data, map_service)
 
         elif choice == 'r':
             display_menu(map_data)
 
         else:
-            print('Invalid input')
+            print('Invalid input...')
 
-        map_service = Map(map_data)
-        map_service.init_for_tsp()
+
+def to_be_continue(map_data, map_service):
+    while True:
+        key = input('Press c to continue... if you want to quit, press q')
+        if key == 'c':
+            render = RenderScreen(map_service.print_map_single_search)
+            render.start()
+            map_service = Map(map_data)
+            map_service.init_for_tsp()
+            render.stop()
+        elif key == 'q':
+            display_menu(map_data)
+        else:
+            print('Invalid input...')
 
 
 def setting(map_data):
@@ -318,16 +338,27 @@ def setting(map_data):
 
     while True:
         print("Welcome to the setting menu!")
-        print("Please enter '1' to set a new target item, '2' to set a new start point, or 'r' to return to the main "
-              "menu")
+        print("Please enter '1' to set a new target item, '2' to set a new start point, ")
+        print("'3' to set a new algorithm, 'r' to return to the main menu")
         choice = input()
         if choice == "1":
-            new_target = set_targets(map_data.items)
-            map_data.target = new_target
+            new_targets = set_targets(map_data.items)
+            map_data.update("targets", new_targets)
 
         elif choice == "2":
             new_worker = get_worker_pos()
-            map_data.worker = new_worker
+            map_data.update("worker", new_worker)
+
+        elif choice == "3":
+            algo = input("Please enter the algorithm you want to use: 1. A* 2. BFS 3. Dijkstra 4. DFS")
+            if algo == "1":
+                map_data.update("algorithm", Algorithm.A_STAR)
+            elif algo == "2":
+                map_data.update("algorithm", Algorithm.BFS)
+            elif algo == "3":
+                map_data.update("algorithm", Algorithm.DIJKSTRA)
+            elif algo == "4":
+                map_data.update("algorithm", Algorithm.DFS)
 
         elif choice == "r":
             return display_menu(map_data)

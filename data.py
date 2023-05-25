@@ -61,8 +61,10 @@ class MapData:
             self.shelves = value
         elif attribute == "items":
             self.items = value
-        elif attribute == "target":
-            self.target = value
+        elif attribute == "targets":
+            self.targets = value
+        elif attribute == "algorithm":
+            self.algorithm = value
         else:
             print("Invalid attribute")
 
