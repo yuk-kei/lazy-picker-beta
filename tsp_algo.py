@@ -420,7 +420,7 @@ class Branch_n_Bound:
         return final_path, final_path_description, total_cost
 
 
-class DummyGreedy:
+class NeartestNeighbor:
     """
     A dummy greedy algorithm to find the nearest vertex to the current vertex for every step
     """
@@ -431,6 +431,7 @@ class DummyGreedy:
         self.vertexes = vertexes
         self.nums_of_vertexes = len(vertexes)
         self.size = size
+        self.start_index = 0
         self.same_target = {}
         self.visited = [False] * self.nums_of_vertexes
         self.result = []
@@ -443,16 +444,51 @@ class DummyGreedy:
                     curr_vertex.add(j)
             self.same_target[i] = curr_vertex
 
+    def choose_first_vertex(self):
+
+        if self.nums_of_vertexes > 1:
+            self.start_index = random.randint(0, self.nums_of_vertexes - 1)
+        else:
+            # print((len(self.vertexes)))
+            self.start_index = 0
+        curr_vertex = self.vertexes[self.start_index]
+        return curr_vertex
+
     def solver(self):
-        curr_vertex = self.vertexes[0]
+
+        # start from a random vertex
+        curr_vertex = self.choose_first_vertex()
 
         self.backtrack(curr_vertex)
-        return self.generate_path()
+        return self.generate_result()
+
+    def iterate(self, curr_vertex):
+
+        curr_index = curr_vertex.index
+        # find an edge with the minimum weight
+        next_min = float("inf")
+        min_edge = None
+        min_index = 0
+        for (i, edge) in enumerate(self.adjacent_map[curr_index]):
+            if edge is not None and edge.weight < next_min and not self.visited[i]:
+                next_min = edge.weight
+                min_edge = edge
+                min_index = i
+        # set the min edge to the next vertex
+        self.color_edge(min_edge)
+        self.result.append(min_edge)
+
+        # set the current vertex as visited
+        self.visited[curr_index] = True
+        for index in self.same_target[curr_index]:
+            self.visited[index] = True
+
+        return self.vertexes[min_index], min_edge
 
     def backtrack(self, curr_vertex):
 
         if len(self.result) == self.size - 1:
-            self.result.append(self.adjacent_map[curr_vertex.index][0])
+            self.result.append(self.adjacent_map[curr_vertex.index][self.start_index])
             return
 
         curr_index = curr_vertex.index
@@ -475,18 +511,54 @@ class DummyGreedy:
         final_path = []
         final_path_description = []
         total_cost = 0
-        for i in range(len(self.result)):
-            edge = self.result[i]
-            edge.path[-1].state = NodeState.STOP
-            total_cost += edge.weight
-            for i in range(1, len(edge.path)):
-                if edge.path[i].state == NodeState.STOP:
-                    continue
-
-                edge.path[i].state = NodeState.PATH
-
-            final_path += edge.path
-            final_path_description.append(edge.path_description)
+        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description, total_cost, len(self.result))
 
         final_path[-1].state = NodeState.START
         return final_path, final_path_description, total_cost
+
+    def generate_result(self):
+        """
+        Generate the result
+        """
+        final_path = []
+        final_path_description = []
+        total_cost = 0
+
+        start_index = 0
+        for i in range(len(self.result)):
+            if self.result[i].node1.index == 0:
+                start_index = i
+                # print(path_vertexes[i].block)
+                break
+
+        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description, total_cost, len(self.result),  start_index)
+        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description, total_cost, start_index)
+
+        return final_path, final_path_description, total_cost
+
+    def construct_path(self, final_path, final_path_description, total_cost, end_index, start_index=0):
+        for i in range(start_index, end_index):
+            edge = self.result[i]
+            edge.path[-1].state = NodeState.STOP
+            total_cost += edge.weight
+            self.color_edge(edge)
+
+            final_path += edge.path
+            final_path_description.append(edge.path_description)
+        return final_path, total_cost, final_path_description
+    
+    def color_edge(self, edge):
+        edge.path[0].state = NodeState.START
+        for j in range(1, len(edge.path)):
+            if edge.path[j].state == NodeState.STOP:
+                continue
+
+            edge.path[j].state = NodeState.PATH
+
+    # def debug(self):
+
+
+
+
+
+

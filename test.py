@@ -23,7 +23,8 @@ worker = Worker(0, 0)
    Test cases:
 --------------------------------------------------------"""
 # (4, 0)2176620,2176619,2176621  (4,4)2620261, 2620841, (2,4)2625240, 2629382, 2625159, (1,4)1258916
-target_list_0 = [2176620,  1258916,  2625240 ]
+target_list_x = [1258916, 2625240, 2176620, 2620261]
+target_list_0 = [2176620,  1258916, 366109]
 target_list_1 = [108335]
 target_list_2 = [108335, 391825, 340367, 286457, 661741]
 target_list_3 = [281610, 342706, 111873, 198029, 366109, 287261, 76283, 254489, 258540, 286457]
@@ -41,6 +42,7 @@ block_5 = Block(4, 5)
 for i in range(test_size):
 
     single_block_list.append(1)
+
 test_case = target_list_0  # change this to test different cases
 
 """-------------------------------------------------------- 
@@ -74,9 +76,9 @@ grid = Map(map_data)
 """ Test TSP algorithm """
 # grid.print_map()
 grid.init_for_tsp()
-# path, path_description = grid.tsp("dummy_greedy")
+path, path_description = grid.tsp("dummy_greedy")
 
-path, path_description = grid.tsp()
+# path, path_description = grid.tsp()
 
 """ Visualize the result """
 
