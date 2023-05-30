@@ -90,9 +90,6 @@ class Block:
         return str(self.pos)
 
 
-
-
-
 class Map:
     """A class to represent the map of the warehouse."""
 
@@ -153,6 +150,11 @@ class Map:
         self.adjacency_map = None
 
     def init_for_tsp(self):
+        """
+        Initialize the map for the TSP algorithm.
+        First, set all the target nodes.
+        Second, set the adjacency map.
+        """
         self.all_target_nodes = self.set_target_entrances()
         # print("initial target nodes successfully")
         # for target in self.all_target_nodes:
@@ -173,12 +175,15 @@ class Map:
 
     def find_single_target(self, start=None, target=None):
         """
-        Find the shortest path to a single target.
+        Find the shortest path to a single target. the algorithm defaults to A*. But you can change it to other algorithms.
 
+        :param start: The start node
+        :param target: The target node
         :return: A list of nodes representing the path from the worker to the target.
         """
         self.reset_map()
-        algorithm = self.algorithm_type
+        # algorithm = self.algorithm_type
+        algorithm = Algorithm.BFS
         # Reset the map
         if start is None:
             curr = self.start_block
@@ -213,7 +218,7 @@ class Map:
         self.has_path = False
         self.grid = copy.deepcopy(self.org_grid)
 
-    def set_target_entrances(self):
+    def set_target_entrances(self, mode="multiple"):
         """
         A function to set the state of the nodes in the target entrances to TARGET.
         """
@@ -224,12 +229,17 @@ class Map:
 
         for node in self.target_blocks:
             # print(node)
-            for block in self.get_neighbours(node):
-                if block.state != NodeState.TARGET:
-                    index += 1
-                    entrance = Vertex(block, index, node)
-                    entrances.append(entrance)
-
+            if mode == "single":
+                index += 1
+                neighbour = self.get_neighbours(node)[0]
+                entrance = Vertex(neighbour, index, node)
+                entrances.append(entrance)
+            else:
+                for block in self.get_neighbours(node):
+                    if block.state != NodeState.TARGET:
+                        index += 1
+                        entrance = Vertex(block, index, node)
+                        entrances.append(entrance)
         return entrances
 
     def set_adjacency_map(self, all_path_nodes):
@@ -242,7 +252,8 @@ class Map:
         adjacency_map = [[None] * n for _ in range(n)]
         for i in range(len(all_path_nodes)):
             for j in range(len(all_path_nodes)):
-                if i != j and all_path_nodes[i].is_entrance_of != all_path_nodes[j].is_entrance_of:
+                # if i != j and all_path_nodes[i].is_entrance_of != all_path_nodes[j].is_entrance_of:
+                if i != j:
                     path = self.find_single_target(all_path_nodes[i].block, all_path_nodes[j].block)
                     # print(all_path_nodes[i].block.pos, all_path_nodes[j].block.pos)
                     path_description = set_path_description(path)
@@ -258,6 +269,11 @@ class Map:
         return adjacency_map
 
     def tsp(self, algorithm="branch_and_bound"):
+        """
+        The main function to solve the TSP problem.
+        :param algorithm: The algorithm to solve the TSP problem. The default is branch and bound.
+        :return: The total path, the total path description and the total length.
+        """
         # self.init_for_tsp()
         if algorithm == "branch_and_bound":
             branch_and_bound = Branch_n_Bound(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1)
@@ -290,6 +306,10 @@ class Map:
 
         # Initialize the open and closed list
         curr = curr_start
+        if curr.pos == curr_target.pos:
+            self.path = []
+            self.has_path = True
+            return self.path
         self.open_list = [curr]
         self.closed_list = []
 
@@ -378,6 +398,10 @@ class Map:
 
         # Initialize the open and closed list
         curr = curr_start
+        if curr.pos == curr_target.pos:
+            self.path = []
+            self.has_path = True
+            return self.path
         self.open_list = [curr]
         self.closed_list = []
 
@@ -808,7 +832,8 @@ def set_path_description(path):
     times the current direction appears and add the text description to the path description list.
     Then the two pointer will move to the next direction.
     """
-
+    if len(path) == 0:
+        return ["Stay still"]
     pre_x = path[0].x
     pre_y = path[0].y
 

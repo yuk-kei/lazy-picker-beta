@@ -23,15 +23,25 @@ worker = Worker(0, 0)
    Test cases:
 --------------------------------------------------------"""
 # (4, 0)2176620,2176619,2176621  (4,4)2620261, 2620841, (2,4)2625240, 2629382, 2625159, (1,4)1258916
-target_list_0 = [2176620,  1258916]
+target_list_0 = [2176620,  1258916,  2625240 ]
 target_list_1 = [108335]
 target_list_2 = [108335, 391825, 340367, 286457, 661741]
 target_list_3 = [281610, 342706, 111873, 198029, 366109, 287261, 76283, 254489, 258540, 286457]
 target_list_4 = [427230, 372539, 396879, 391680, 208660, 105912, 332555, 227534, 68048, 188856, 736830, 736831, 479020, 103313, 1]
 target_list_5 = [633, 1321, 3401, 5329, 10438, 372539, 396879, 16880, 208660, 105912, 332555, 227534, 68048, 188856,
                  736830, 736831, 479020, 103313, 1, 20373]
+test_size = 5
+single_block_list = []
 
-test_case = target_list_3 # change this to test different cases
+block_1 = Block(0, 0)
+block_2 = Block(4, 1)
+block_3 = Block(8, 1)
+block_4 = Block(8, 5)
+block_5 = Block(4, 5)
+for i in range(test_size):
+
+    single_block_list.append(1)
+test_case = target_list_0  # change this to test different cases
 
 """-------------------------------------------------------- 
    Data initialization should be written below
