@@ -12,7 +12,8 @@ class Edge:
         self.node2 = node2
         self.path = path
         self.path_description = path_description
-        self.weight = len(path) - 1
+        self.weight = 0 if len(path) == 0 else len(path) - 1
+        # self.weight = len(path)
 
     def __lt__(self, other):
         return self.weight < other.weight
@@ -43,6 +44,7 @@ class PathTreeNode:
     def __init__(self, vertex, num_of_vertexes, cost=0, parent=None):
         self.vertex = vertex
         self.parent = parent
+        self.first_index = vertex.index if parent is None else parent.first_index
         self.num_of_vertexes = num_of_vertexes
         self.path = parent.path + [vertex] if parent else [vertex]
         self.cost = cost
@@ -144,6 +146,7 @@ class Branch_n_Bound:
             # print((len(self.vertexes)))
             random_index = 0
         # random_vertexes = []
+        # random_index = 0
         random_vertex = self.vertexes[random_index]
         root = PathTreeNode(random_vertex, self.nums_of_vertexes)
         start_matrix = copy.deepcopy(self.matrix)
@@ -259,6 +262,8 @@ class Branch_n_Bound:
             parent = curr_tree_node.parent
             pre_vertex = parent.vertex
             pre_index = pre_vertex.index
+            # first_index = curr_tree_node.first_index
+            first_index = curr_tree_node.path[0].index
 
             print("parent matrix: ", )
             print("pre_index: ", pre_index, "-> curr_index: ", curr_index)
@@ -281,6 +286,8 @@ class Branch_n_Bound:
             # delete the column of the curr_vertex
             for i in range(len(matrix)):
                 matrix[i][curr_index] = float("inf")
+
+            matrix[curr_index][first_index] = float("inf")
 
             reduce_cost, matrix = self.reduce_row_n_col(matrix)
 
@@ -420,7 +427,7 @@ class Branch_n_Bound:
         return final_path, final_path_description, total_cost
 
 
-class NeartestNeighbor:
+class NearestNeighbor:
     """
     A dummy greedy algorithm to find the nearest vertex to the current vertex for every step
     """
@@ -548,7 +555,7 @@ class NeartestNeighbor:
         return final_path, total_cost, final_path_description
     
     def color_edge(self, edge):
-        edge.path[0].state = NodeState.START
+        edge.path[0].state = NodeState.STOP
         for j in range(1, len(edge.path)):
             if edge.path[j].state == NodeState.STOP:
                 continue

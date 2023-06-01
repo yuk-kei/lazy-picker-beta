@@ -300,7 +300,7 @@ def find_path(map_data):
             to_be_continue(map_data, map_service)
 
         elif choice == '2':
-            map_service.tsp("dummy_greedy")
+            map_service.tsp("nearest_neighbor")
             to_be_continue(map_data, map_service)
 
         elif choice == 'r':

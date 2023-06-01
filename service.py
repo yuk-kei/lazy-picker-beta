@@ -1,7 +1,7 @@
 import copy
 
 from data import Algorithm, NodeState
-from tsp_algo import Vertex, Edge, Branch_n_Bound, NeartestNeighbor
+from tsp_algo import Vertex, Edge, Branch_n_Bound, NearestNeighbor
 from visualize import print_banner, refresh
 
 # Heuristic factor Constant
@@ -218,7 +218,7 @@ class Map:
         self.has_path = False
         self.grid = copy.deepcopy(self.org_grid)
 
-    def set_target_entrances(self, mode="single"):
+    def set_target_entrances(self, mode="multiple"):
         """
         A function to set the state of the nodes in the target entrances to TARGET.
         """
@@ -279,13 +279,20 @@ class Map:
             branch_and_bound = Branch_n_Bound(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1)
             branch_and_bound.set_matrix()
             self.total_path, self.total_path_description, self.total_length = branch_and_bound.solve()
-        elif algorithm == "dummy_greedy":
-            dummy_greedy = NeartestNeighbor(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1)
+
+        elif algorithm == "nearest_neighbor":
+            dummy_greedy = NearestNeighbor(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1)
+            self.total_path, self.total_path_description, self.total_length = dummy_greedy.solver()
+
+        elif algorithm == "nearest_neighbor_iterate":
+            dummy_greedy = NearestNeighbor(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1)
             # self.total_path, self.total_path_description, self.total_length = dummy_greedy.solver()
 
             curr_vertex = dummy_greedy.choose_first_vertex()
+            self.grid[curr_vertex.block.pos[0]][curr_vertex.block.pos[1]].state = NodeState.STOP
             curr_edge = None
             self.print_map()
+            input()
             while len(dummy_greedy.result) < dummy_greedy.size - 1:
                 curr_vertex, curr_edge = dummy_greedy.iterate(curr_vertex)
                 self.total_path, self.total_path_description, self.total_length = curr_edge.path, curr_edge.path_description, curr_edge.weight
@@ -309,6 +316,7 @@ class Map:
             self.reset_map()
             self.total_path, self.total_path_description, self.total_length = dummy_greedy.generate_result()
             input()
+
         refresh()
         self.set_total_path_state()
         self.print_map()
