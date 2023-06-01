@@ -5,6 +5,7 @@ from data import Algorithm, MapData
 from entities import Item, Shelf, Worker
 from service import Map
 from visualize import refresh, print_banner, RenderScreen, waiting
+from tkinter.filedialog import askopenfilename
 
 
 def read_map_data(filename):
@@ -17,19 +18,28 @@ def read_map_data(filename):
     """
 
     items = []
-    with open(filename, 'r') as file:
-        # Skip the first line of the file
+    try:
+        with open(filename, 'r') as file:
+            # Skip the first line of the file
 
-        next(file)
-        # Read the file line by line
-        for line in file:
-            data = line.strip().split()
-            item = Item(int(data[0]), float(data[1]), float(data[2]))
+            next(file)
+            # Read the file line by line
+            for line in file:
+                data = line.strip().split()
+                item = Item(int(data[0]), float(data[1]), float(data[2]))
 
-            items.append(item)
+                items.append(item)
+    except FileNotFoundError:
+        print('File not found, please make sure the file is in the same directory as the program.')
+        choice = input('Press 1 to try again when the file is in the same directory, press 2 to choose file manually: ')
+        if choice == '1':
+            return read_map_data(filename)
+        elif choice == '2':
+            print("File Browser will open, please choose the file.")
+            filename = askopenfilename()
+            return read_map_data(filename)
 
     shelves = gen_shelves(items)
-
     return items, shelves
 
 
@@ -84,7 +94,7 @@ def get_worker_pos():
     :return: A worker object, which is used to create a worker
     :author:
     """
-
+    print("-----------------------------------------------------------------------------")
     while True:
         print()
         print("please enter the worker's starting position")
@@ -174,6 +184,31 @@ def set_target_id_once(items_map):
     return target_items
 
 
+def get_time_limit():
+    print("-----------------------------------------------------------------------------")
+    choice = input("Do you want to change the time limit ? (y/n) Default is 60 seconds")
+    while True:
+        if choice == "y":
+            print("Please enter the time limit in seconds: ")
+            time_limit = input()
+            if time_limit.isnumeric():
+                return int(time_limit)
+            elif is_float(time_limit):
+                return float(time_limit)
+            else:
+                print("Invalid input: ", time_limit, "is not a number")
+        else:
+            return 60
+
+
+def is_float(value):
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+
 def initialize_data():
     """
     The initialize_data function reads the data from the database file to get the items and shelves,
@@ -186,10 +221,12 @@ def initialize_data():
     """
 
     items, shelves = read_map_data('qvBox-warehouse-data-s23-v01.txt')
-    worker = get_worker_pos()
 
     targets = set_targets(items)
-    map_data = MapData(worker, shelves, items, targets)
+    worker = get_worker_pos()
+    time_limit = get_time_limit()
+    access_mode = set_access_mode()
+    map_data = MapData(worker, shelves, items, targets, time_limit=time_limit, access_mode=access_mode)
 
     return map_data
 
@@ -218,16 +255,78 @@ def set_targets_one_by_one(items_map):
             print("Invalid input")
 
 
+def set_target_from_file(items_map):
+    file_path = "qvBox-warehouse-orders-list-part01.txt"
+    while True:
+        try:
+            with open(file_path, 'r') as file:
+                file_contents = file.read()
+                lines = file_contents.split('\n')
+                break
+
+        except FileNotFoundError:
+            print("Error: File not found. Please make sure your file is in the same directory as this program.")
+            choice = input("Would you like to upload your file manually? (y/n)")
+            if choice == "y":
+                print("A file explorer will open. Please select your file.")
+                file_path = askopenfilename()
+            else:
+                print("Make sure your file is in the same directory as this program and try again.")
+                pass
+        except PermissionError:
+            print("Error: Permission denied. Make sure you have the necessary permissions to access the file.")
+        except Exception as e:
+            print("An error occurred:", e)
+
+    order_list = [line.split(', ') for line in lines if line]
+    order_list_row = input('Please enter which order row you want to proceed. (Start at 1)')
+    curr_order = order_list[int(order_list_row) - 1]
+    target_items = []
+    for target_id in curr_order:
+        target_id = target_id.strip()
+        if target_id.isnumeric():
+            converted_id = int(target_id)
+            if converted_id in items_map:
+                target_items.append(items_map[converted_id])
+            else:
+                print("Cannot find item with id:", converted_id)
+                return set_target_from_file(items_map)
+
+    return target_items
+
+
 def set_targets(items):
-    print("Do you want to set multiple targets one by one? (y/n)")
+    print("-----------------------------------------------------------------------------")
+    print("Press 1 to set target items one by one")
+    print("Press 2 to enter all target items by once")
+    print("Press 3 to enter target items through input files")
+    print()
     items_map = {items[i].item_id: items[i] for i in range(len(items))}
     while True:
-        is_multiple = input()
-        if is_multiple == "y":
+        choice = input()
+        if choice == "1":
 
             return set_targets_one_by_one(items_map)
-        elif is_multiple == "n":
+        elif choice == "2":
             return set_target_id_once(items_map)
+        elif choice == "3":
+            return set_target_from_file(items_map)
+        else:
+            print("Invalid input")
+
+
+def set_access_mode():
+    print("-----------------------------------------------------------------------------")
+    print("Press 1 to set access mode to 'single access point'")
+    print("Press 2 to set access mode to multiple access point'")
+    print("Warning: Current version of the program will not be able to find the optimal path for multiple access point")
+    print("-----------------------------------------------------------------------------")
+    while True:
+        choice = input()
+        if choice == "1":
+            return "single"
+        elif choice == "2":
+            return "multiple"
         else:
             print("Invalid input")
 
@@ -419,29 +518,3 @@ if __name__ == '__main__':
 NOT USED, save for future development
 ----------------------------------------------
 """
-
-
-def get_algorithm():
-    """
-    The get_algorithm function prompts the user to select an algorithm from a list of options.
-    The function returns the selected algorithm as a string.
-
-    :return: An algorithm enum
-    """
-    print("Please select the algorithm you want to use:")
-    print("1. Greedy")
-    print("2. BFS")
-    print("3. DFS")
-    print("4. A*")
-    algorithm = input()
-    if algorithm == "1":
-        return Algorithm.GREEDY
-    elif algorithm == "2":
-        return Algorithm.BFS
-    elif algorithm == "3":
-        return Algorithm.DFS
-    elif algorithm == "4":
-        return Algorithm.A_STAR
-    else:
-        print("Invalid input")
-        return get_algorithm()

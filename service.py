@@ -1,7 +1,7 @@
 import copy
 
 from data import Algorithm, NodeState
-from tsp_algo import Vertex, Edge, Branch_n_Bound, NearestNeighbor
+from tsp_algo import Vertex, Edge, Branch_n_Bound, NearestNeighbor, color_edge
 from visualize import print_banner, refresh
 
 # Heuristic factor Constant
@@ -105,6 +105,8 @@ class Map:
         self.map_row = map_data.map_row
         self.map_col = map_data.map_col
         self.algorithm_type = map_data.algorithm
+        self.time_limit = map_data.time_limit
+        self.access_mode = map_data.access_mode
 
         # All the map component are down here, use this to implement the algorithm
         self.grid = [[Block(i, j) for j in range(self.map_col)] for i in range(self.map_row)]
@@ -156,9 +158,6 @@ class Map:
         Second, set the adjacency map.
         """
         self.all_target_nodes = self.set_target_entrances()
-        # print("initial target nodes successfully")
-        # for target in self.all_target_nodes:
-        #     print(target)
         self.adjacency_map = self.set_adjacency_map(self.all_target_nodes)
 
         # print("initial adjacency map successfully")
@@ -182,7 +181,6 @@ class Map:
         :return: A list of nodes representing the path from the worker to the target.
         """
         self.reset_map()
-        # algorithm = self.algorithm_type
         algorithm = Algorithm.BFS
         # Reset the map
         if start is None:
@@ -218,7 +216,7 @@ class Map:
         self.has_path = False
         self.grid = copy.deepcopy(self.org_grid)
 
-    def set_target_entrances(self, mode="multiple"):
+    def set_target_entrances(self):
         """
         A function to set the state of the nodes in the target entrances to TARGET.
         """
@@ -229,7 +227,7 @@ class Map:
 
         for node in self.target_blocks:
             # print(node)
-            if mode == "single":
+            if self.access_mode == "single":
                 index += 1
                 neighbour = self.get_neighbours(node)[0]
                 entrance = Vertex(neighbour, index, node)
@@ -276,7 +274,7 @@ class Map:
         """
         # self.init_for_tsp()
         if algorithm == "branch_and_bound":
-            branch_and_bound = Branch_n_Bound(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1)
+            branch_and_bound = Branch_n_Bound(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1,self.time_limit)
             branch_and_bound.set_matrix()
             self.total_path, self.total_path_description, self.total_length = branch_and_bound.solve()
 
@@ -305,7 +303,7 @@ class Map:
 
             curr_edge = dummy_greedy.adjacent_map[curr_vertex.index][dummy_greedy.start_index]
             dummy_greedy.result.append(curr_edge)
-            dummy_greedy.color_edge(curr_edge)
+            color_edge(curr_edge)
 
             self.total_path, self.total_path_description, self.total_length = curr_edge.path, curr_edge.path_description, curr_edge.weight
             self.set_total_path_state()
@@ -707,7 +705,7 @@ class Map:
         print()
         print()
         print("'\U0001F680': is the start point, '\U0001F3AF': is the target item, '\U0001F7E9' is the path, "
-              "'\U0001F6AA' is the shelf location, '\U0001F518' is the empty space ")
+              "'\U0001F6AA' is the shelf location, '\U0001F518' is the empty space , '\U0001F535' is the entry point")
 
     def print_map_single_search(self):
         """A function to visualize the map.

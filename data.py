@@ -16,7 +16,7 @@ class Algorithm(Enum):
 class MapData:
     """A class to store the data for the map."""
 
-    def __init__(self, worker, shelves, items, targets, algorithm=Algorithm.A_STAR, map_row=40, map_col=21):
+    def __init__(self, worker, shelves, items, targets, destination=None, time_limit=60, algorithm=Algorithm.A_STAR, map_row=40, map_col=21,access_mode="multiple"):
         self.worker_org = worker.pos
         self.map_row = map_row
         self.map_col = map_col
@@ -24,7 +24,10 @@ class MapData:
         self.shelves = shelves
         self.items = items
         self.targets = targets
+        self.destination = destination
+        self.time_limit = time_limit
         self.algorithm = algorithm
+        self.access_mode = access_mode
 
     def get_map_row(self):
         return self.map_row

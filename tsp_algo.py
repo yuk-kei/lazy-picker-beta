@@ -81,19 +81,25 @@ def print_matrix(matrix):
         print()
 
 
+
+
+
 class Branch_n_Bound:
     """
     Branch and bound algorithm to find the shortest path
     """
 
-    def __init__(self, adjacent_map, vertexes, size, limit_time=False):
+    def __init__(self, adjacent_map, vertexes, size, limit_time=60, is_limit_time=True,destination=None):
 
         self.adjacent_map = adjacent_map
         self.vertexes = vertexes
         self.nums_of_vertexes = len(vertexes)
         self.matrix = None
         self.limit_time = limit_time
+        self.is_limit_time = is_limit_time
         self.size = size
+        self.has_destination = destination is not None
+        self.destination = destination
         self.pq = PriorityQueue()
         self.same_target = {}
         self.result = []
@@ -140,7 +146,7 @@ class Branch_n_Bound:
                 Keep reducing the matrix and put the node into the priority queue
         """
         start_time = time.time()
-        if self.nums_of_vertexes > 1:
+        if self.nums_of_vertexes > 1 and not self.has_destination:
             random_index = random.randint(0, self.nums_of_vertexes - 1)
         else:
             # print((len(self.vertexes)))
@@ -179,11 +185,16 @@ class Branch_n_Bound:
                 # for vertex in curr_node.path:
                 #     print(vertex.block, end=" ")
                 print("start_index: ", self.vertexes[random_index].block)
-                # print("what the fuck")
+
                 return self.generate_result(curr_node)
 
-            # set the limit time, which is 14 seconds, stop the algorithm and return a result
-            if self.limit_time and curr_time - start_time > 14:
+            elif self.has_destination and curr_node.len == self.size - 1:
+
+                return self.generate_result_with_destination(curr_node, self.destination)
+
+
+            # set the limit time, which default is 60 seconds, stop the algorithm and return a result
+            if self.is_limit_time and self.limit_time and curr_time - start_time > self.limit_time:
                 print("Time is up! Returning what we current got")
                 max_node = curr_node
                 while not self.pq.empty():
@@ -191,27 +202,14 @@ class Branch_n_Bound:
                     if max_node.len < temp_node.len:
                         max_node = temp_node
 
-                # print_matrix(max_node.matrix)
-                # print(max_node.visited)
                 for index in range(self.nums_of_vertexes):
                     if not max_node.visited[index]:
                         next_vertex = self.vertexes[index]
                         new_matrix = copy.deepcopy(max_node.matrix)
-
                         next_node = PathTreeNode(next_vertex, self.nums_of_vertexes, max_node.cost, max_node)
-
                         self.reduce_matrix(new_matrix, next_node)
-
-                        # print_matrix(max_node.matrix)
-                        # print("pre_max_node: ", max_node.len, " size: ", self.size)
                         max_node = next_node
-                        # print("max_node: ", max_node.len, " size: ", self.size)
-                        # print_matrix(max_node.matrix)
 
-                # print("Success!")
-                # print("Path: ")
-                # for vertex in max_node.path:
-                #     print(vertex.block, end=" ")
                 return self.generate_result(max_node)
 
             for index in range(self.nums_of_vertexes):
@@ -221,15 +219,11 @@ class Branch_n_Bound:
 
                     next_node = PathTreeNode(next_vertex, self.nums_of_vertexes, curr_node.cost, curr_node)
                     self.reduce_matrix(new_matrix, next_node)
-                    # if next_node.len == self.size:
-                    #     return self.generate_result(next_node)
+
                     self.pq.put(next_node)
 
-    # def iterate_child_node(self, curr_node):
-    #
-    #             # print("put: ", next_node.vertex.block)
-    #             # print("cost", next_node.cost, "next_node: ", next_node.len, " size: ", self.size)
-    #             # print()
+
+
 
     def reduce_matrix(self, matrix, curr_tree_node):
         """
@@ -262,8 +256,7 @@ class Branch_n_Bound:
             parent = curr_tree_node.parent
             pre_vertex = parent.vertex
             pre_index = pre_vertex.index
-            # first_index = curr_tree_node.first_index
-            first_index = curr_tree_node.path[0].index
+            first_index = curr_tree_node.first_index
 
             print("parent matrix: ", )
             print("pre_index: ", pre_index, "-> curr_index: ", curr_index)
@@ -426,6 +419,50 @@ class Branch_n_Bound:
         final_path[-1].state = NodeState.START
         return final_path, final_path_description, total_cost
 
+    def generate_result_with_destination(self, curr_node, destination):
+        """
+        Generate the result with destination
+        :param curr_node: The current node
+        :param destination: The destination
+        :return: The result
+        """
+
+        final_path = []
+        final_path_description = []
+        total_cost = 0
+        curr_vertex = curr_node.vertex
+        path_vertexes = curr_node.path
+        for i in range(0, len(path_vertexes) - 1):
+            curr_index = i + 1
+            self.result.append(self.adjacent_map[path_vertexes[i].index][path_vertexes[curr_index].index])
+
+        self.result.append(self.adjacent_map[curr_vertex.index][destination.index])
+
+        for edge in self.result:
+            if len(edge.path) == 0:
+                continue
+            edge.path[0].state = NodeState.STOP
+            total_cost += edge.weight
+            for i in range(1, len(edge.path)):
+                if edge.path[i].state == NodeState.STOP:
+                    continue
+
+                edge.path[i].state = NodeState.PATH
+
+            final_path += edge.path
+            final_path_description.append(edge.path_description)
+        final_path[-1].state = NodeState.START
+        return final_path, final_path_description, total_cost
+
+
+def color_edge(edge):
+    edge.path[0].state = NodeState.STOP
+    for j in range(1, len(edge.path)):
+        if edge.path[j].state == NodeState.STOP:
+            continue
+
+        edge.path[j].state = NodeState.PATH
+
 
 class NearestNeighbor:
     """
@@ -482,7 +519,7 @@ class NearestNeighbor:
                 min_edge = edge
                 min_index = i
         # set the min edge to the next vertex
-        self.color_edge(min_edge)
+        color_edge(min_edge)
         self.result.append(min_edge)
 
         # set the current vertex as visited
@@ -518,7 +555,8 @@ class NearestNeighbor:
         final_path = []
         final_path_description = []
         total_cost = 0
-        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description, total_cost, len(self.result))
+        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description,
+                                                                             total_cost, len(self.result))
 
         final_path[-1].state = NodeState.START
         return final_path, final_path_description, total_cost
@@ -538,8 +576,10 @@ class NearestNeighbor:
                 # print(path_vertexes[i].block)
                 break
 
-        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description, total_cost, len(self.result),  start_index)
-        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description, total_cost, start_index)
+        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description,
+                                                                             total_cost, len(self.result), start_index)
+        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description,
+                                                                             total_cost, start_index)
 
         return final_path, final_path_description, total_cost
 
@@ -548,24 +588,10 @@ class NearestNeighbor:
             edge = self.result[i]
             edge.path[-1].state = NodeState.STOP
             total_cost += edge.weight
-            self.color_edge(edge)
+            color_edge(edge)
 
             final_path += edge.path
             final_path_description.append(edge.path_description)
         return final_path, total_cost, final_path_description
-    
-    def color_edge(self, edge):
-        edge.path[0].state = NodeState.STOP
-        for j in range(1, len(edge.path)):
-            if edge.path[j].state == NodeState.STOP:
-                continue
-
-            edge.path[j].state = NodeState.PATH
 
     # def debug(self):
-
-
-
-
-
-

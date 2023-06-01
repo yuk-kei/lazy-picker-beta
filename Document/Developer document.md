@@ -94,6 +94,7 @@ The Lazy Picker is a standalone program designed to assist warehouse workers in 
 
 
 
+
 ### Main data types and structures:
 
 In order to facilitate scalability and efficient management of data, we have designed a system where the data from the file is stored in separate classes. For instance, we have created a class called "Item" to store all relevant information pertaining to an individual item. Similarly, we have designed classes for other entities such as workers and shelves. This approach enables us to easily accommodate additional data and functionalities in the future.
@@ -1114,10 +1115,10 @@ class Map:
 ​	
 ​	    curr.state = NodeState.START
 ​	
-	    # Reverse the path to get the correct order
-	    self.path.reverse()
-	    self.visualize(False)
-	    self.print_path_description()
+​	    # Reverse the path to get the correct order
+​	    self.path.reverse()
+​	    self.visualize(False)
+​	    self.print_path_description()
 #### A Star Search
 
 A star search will keep iterating until it finds a path from the worker to the target. In each iteration, it will pick the first node from the open list, which is the node with the lowest final cost, and call the function `astar_iterate()`.  The function will check all the neighbours of the current node and do the following:
