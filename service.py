@@ -1,8 +1,9 @@
 import copy
+from time import sleep
 
 from data import Algorithm, NodeState
 from tsp_algo import Vertex, Edge, Branch_n_Bound, NearestNeighbor, color_edge
-from visualize import print_banner, refresh
+from visualize import print_banner, refresh, RenderScreen, spinner, waiting
 
 # Heuristic factor Constant
 FACTOR = 1
@@ -105,9 +106,11 @@ class Map:
         self.map_row = map_data.map_row
         self.map_col = map_data.map_col
         self.algorithm_type = map_data.algorithm
+        self.tsp_algorithm = map_data.tsp_algo
         self.time_limit = map_data.time_limit
         self.access_mode = map_data.access_mode
         self.destination = map_data.destination
+        self.is_debug = map_data.is_debug
 
         # All the map component are down here, use this to implement the algorithm
         self.grid = [[Block(i, j) for j in range(self.map_col)] for i in range(self.map_row)]
@@ -156,6 +159,7 @@ class Map:
         self.has_path = False
         self.all_target_nodes = []
         self.adjacency_map = None
+        self.render = RenderScreen(waiting)
 
     def init_for_tsp(self):
         """
@@ -166,18 +170,6 @@ class Map:
         self.all_target_nodes = self.set_target_entrances()
         self.adjacency_map = self.set_adjacency_map(self.all_target_nodes)
 
-        # print("initial adjacency map successfully")
-
-    def test_basic_tsp(self):
-        """
-        Test the basic TSP algorithm.
-        """
-        for target in self.target_blocks:
-            self.find_single_target(start=self.current_block, target=target)
-
-        self.set_total_path_state()
-        # self.print_map_tsp()
-
     def find_single_target(self, start=None, target=None):
         """
         Find the shortest path to a single target. the algorithm defaults to A*. But you can change it to other algorithms.
@@ -187,7 +179,7 @@ class Map:
         :return: A list of nodes representing the path from the worker to the target.
         """
         self.reset_map()
-        algorithm = Algorithm.BFS
+        algorithm = self.algorithm_type
         # Reset the map
         if start is None:
             curr = self.start_block
@@ -281,64 +273,53 @@ class Map:
         self.reset_map()
         return adjacency_map
 
-    def tsp(self, algorithm="branch_and_bound"):
+    def tsp(self):
         """
         The main function to solve the TSP problem.
-        :param algorithm: The algorithm to solve the TSP problem. The default is branch and bound.
+
         :return: The total path, the total path description and the total length.
         """
         # self.init_for_tsp()
+        algorithm = self.tsp_algorithm
+        # set the length of the total path
         if self.destination_block is not None:
             size = len(self.target_blocks) + 2
         else:
             size = len(self.target_blocks) + 1
 
+        time_is_up = False
+        # Render animation, incase the customer gets bored waiting for the result
+        if not self.is_debug:
+            self.render.start()
+
         if algorithm == "branch_and_bound":
 
-            branch_and_bound = Branch_n_Bound(self.adjacency_map, self.all_target_nodes, size, limit_time=self.time_limit, destination=self.destination)
+            branch_and_bound = Branch_n_Bound(self.adjacency_map, self.all_target_nodes, size, is_debug=self.is_debug,
+                                              limit_time=self.time_limit, destination=self.destination_block)
             branch_and_bound.set_matrix()
-            self.total_path, self.total_path_description, self.total_length = branch_and_bound.solve()
+            time_is_up, self.total_path, self.total_path_description, self.total_length = branch_and_bound.solve()
 
         elif algorithm == "nearest_neighbor":
-            dummy_greedy = NearestNeighbor(self.adjacency_map, self.all_target_nodes, size)
-            self.total_path, self.total_path_description, self.total_length = dummy_greedy.solver()
+            nearest_neighbor = NearestNeighbor(self.adjacency_map, self.all_target_nodes, size,
+                                               destination=self.destination_block, is_debug=self.is_debug, )
+            self.total_path, self.total_path_description, self.total_length = nearest_neighbor.solver()
 
-        elif algorithm == "nearest_neighbor_iterate":
-            dummy_greedy = NearestNeighbor(self.adjacency_map, self.all_target_nodes, size)
-            # self.total_path, self.total_path_description, self.total_length = dummy_greedy.solver()
+        if not self.is_debug:
+            self.render.stop()
+            # incase the rendering is not finished
+            sleep(0.8)
+            refresh()
 
-            curr_vertex = dummy_greedy.choose_first_vertex()
-            self.grid[curr_vertex.block.pos[0]][curr_vertex.block.pos[1]].state = NodeState.STOP
-            curr_edge = None
-            self.print_map()
-            input()
-            while len(dummy_greedy.result) < dummy_greedy.size - 1:
-                curr_vertex, curr_edge = dummy_greedy.iterate(curr_vertex)
-                self.total_path, self.total_path_description, self.total_length = curr_edge.path, curr_edge.path_description, curr_edge.weight
-                self.set_total_path_state()
-                self.print_map()
-                for sentence in curr_edge.path_description:
-                    print(sentence)
-                input()
-                self.reset_map()
+        # incase the rendering is not finished
 
-            curr_edge = dummy_greedy.adjacent_map[curr_vertex.index][dummy_greedy.start_index]
-            dummy_greedy.result.append(curr_edge)
-            color_edge(curr_edge)
-
-            self.total_path, self.total_path_description, self.total_length = curr_edge.path, curr_edge.path_description, curr_edge.weight
-            self.set_total_path_state()
-            self.print_map()
-            for sentence in curr_edge.path_description:
-                print(sentence)
-            input()
-            self.reset_map()
-            self.total_path, self.total_path_description, self.total_length = dummy_greedy.generate_result()
-            input()
-
-        refresh()
+        # color the path base on the return re
         self.set_total_path_state()
         self.print_map()
+        if time_is_up:
+            print()
+            print("Time is up! Failed to find a optimal solution within " + str(self.time_limit) + " seconds.")
+            print("Returning what we have now...")
+            print()
         print_path_descriptions(self.total_path_description, self.total_length)
         print("If you want to dump the result to a .txt file, press 'd', press other keys and enter to continue.")
         if input() == "d":
@@ -685,6 +666,16 @@ class Map:
         return neighbours
 
     def print_map(self):
+        """
+        A function to display the result map.
+        The map will be printed in the format of a 2D grid
+        To make the index of the map easier to read, the function does the following:
+        The map is printed row by row, the first index of each row will be printed to represent the y-axis.
+        If the x-axis index is less than 10, then the row number will be printed with 2 spaces.
+        If the x-axis index is more than 10, then the row number will be printed with 1 space.
+        The last row of will be printed as the x-axis.
+
+        """
         print_banner()
 
         for y in range(self.map_col - 1, -1, -1):
@@ -727,68 +718,6 @@ class Map:
         print()
         print("'\U0001F680': is the start point, '\U0001F3AF': is the target item, '\U0001F7E9' is the path, "
               "'\U0001F6AA' is the shelf location, '\U0001F518' is the empty space , '\U0001F535' is the entry point")
-
-    def print_map_single_search(self):
-        """A function to visualize the map.
-        First, the function will print the map in the terminal.
-        The map will be printed in the format of a 2D grid, where origin point is in the bottom left corner of the map.
-        To make the index of the map easier to read, the function does the following:
-        The map is printed row by row, the first index of each row will be printed to represent the y-axis.
-        If the x-axis index is less than 10, then the row number will be printed with 2 spaces.
-        If the x-axis index is more than 10, then the row number will be printed with 1 space.
-        The last row of will be printed as the x-axis.
-
-        Then, the function will refresh the map with the given refresh rate if is_refresh signal is True.
-        """
-        print_banner()
-        # Print the map
-        for y in range(self.map_col - 1, -1, -1):
-            # Print the y-axis index
-            # if the y-axis index is less than 10, then print the index with 2 spaces
-            if 0 <= y < 10:
-                print(y, end="  ")
-            # if the y-axis index is more than 10, then print the index with 1 space
-            elif y >= 10:
-                print(y, end=" ")
-            # Print the map content
-            for x in range(self.map_row):
-                if self.grid[x][y].state == NodeState.TARGET:
-                    print("\U0001F3AF", end=" ")
-                elif self.grid[x][y].state == NodeState.START:
-                    print("\U0001F680", end=" ")
-                elif self.grid[x][y].state == NodeState.BLOCK:
-                    print("\U0001F6AA", end=" ")
-                elif self.grid[x][y].state == NodeState.PATH:
-                    print("\U0001F7E9", end=" ")
-                elif self.grid[x][y].state == NodeState.CLOSE:
-                    print("\U0001F534", end=" ")
-                elif self.grid[x][y].state == NodeState.OPEN:
-                    print("\U0001F50E", end=" ")
-                    # print("\U0001F7E9", end=" ")
-                else:
-                    print("\U0001F518", end=" ")
-                    # print("\U0001F535", end=" ")
-            print()
-        # Print the x-axis index
-        for i in range(self.map_row + 1):
-            # Empty space for the left bottom corner
-            if i == 0:
-                print(" ", end="  ")
-            # Print the x-axis index
-            elif 0 < i < 10:
-                print(i - 1, end="  ")
-            elif i >= 10:
-                print(i - 1, end=" ")
-        print()
-        print()
-        print("'\U0001F680': is the start point, '\U0001F3AF': is where your target item located, "
-              "'\U0001F6AA' is the block")
-        print("'\U0001F7E9' is the path, '\U0001F50E': is in the node will be searched. "
-              "'\U0001F534' is the node has been searched")
-
-        # if is_refresh:
-        #     sleep(refresh_rate)
-        #     refresh()
 
     def dump_instruction_into_file(self):
         """A function to dump the instruction into a file.
@@ -941,7 +870,8 @@ def set_path_description(path):
 
 
 def print_path_descriptions(total_path_descriptions, total_path):
-    """A function to print the text path description.
+    """
+    A function to print the text path description.
     The function will print the text path description for each path.
     """
     print("The path length is: ", total_path)

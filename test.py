@@ -19,7 +19,7 @@ items, shelves = read_map_data('qvBox-warehouse-data-s23-v01.txt')
     --------------------------------------------------------"""""
 
 worker = Worker(0, 0)
-destination = (5, 6)
+destination = (30, 19)
 """-------------------------------------------------------- 
    Test cases:
 --------------------------------------------------------"""
@@ -30,10 +30,10 @@ target_list_0 = [2176620, 2620261]
 target_list_1 = [108335]
 target_list_2 = [108335, 391825, 340367, 286457, 661741]
 target_list_3 = [281610, 342706, 111873, 198029, 366109, 287261, 76283, 254489, 258540, 286457]
-target_list_4 = [427230, 372539, 396879, 391680, 208660, 105912, 332555, 227534, 68048, 188856, 736830, 736831, 479020,
-                 103313, 1]
+target_list_4 = [427230, 372539, 396879, 391680, 208660, 105912, 332555, 227534, 68048, 188856, 736830, 736831, 479020, 103313, 1]
 target_list_5 = [633, 1321, 3401, 5329, 10438, 372539, 396879, 16880, 208660, 105912, 332555, 227534, 68048, 188856,
                  736830, 736831, 479020, 103313, 1, 20373]
+target_list_7 = [284251, 780493, 226774, 140817, 191515, 327710]
 test_size = 5
 single_block_list = []
 
@@ -54,7 +54,7 @@ def find_item_id(x, y):
 for i in range(test_size):
     single_block_list.append(1)
 
-test_case = target_list_5  # change this to test different cases
+test_case = target_list_4  # change this to test different cases
 
 """-------------------------------------------------------- 
    Data initialization should be written below
@@ -66,7 +66,9 @@ for item_id in test_case:
     if item_id in items_map:
         targets.append(items_map[item_id])
 
-map_data = MapData(worker, shelves, items, targets, destination)
+# tsp_algo = 'nearest_neighbor'
+tsp_algo = "branch_and_bound"
+map_data = MapData(worker, shelves, items, targets, destination=None, time_limit=20, tsp_algo=tsp_algo)
 # map_data = MapData(worker, shelves, items, targets)
 grid = Map(map_data)
 """--------------------------------------------------------
@@ -87,8 +89,8 @@ grid = Map(map_data)
 """ Test TSP algorithm """
 grid.init_for_tsp()
 # grid.print_map()
-# grid.tsp()
-path, path_description = grid.tsp("nearest_neighbor")
+grid.tsp()
+# path, path_description = grid.tsp("nearest_neighbor")
 
 # path, path_description = grid.tsp()
 

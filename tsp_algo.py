@@ -86,8 +86,8 @@ class Branch_n_Bound:
     Branch and bound algorithm to find the shortest path
     """
 
-    def __init__(self, adjacent_map, vertexes, size, limit_time=60, is_limit_time=False, destination=None,
-                 is_debug=True):
+    def __init__(self, adjacent_map, vertexes, size, limit_time=60, is_limit_time=True, destination=None,
+                 is_debug=False):
 
         self.adjacent_map = adjacent_map
         self.vertexes = vertexes
@@ -97,6 +97,7 @@ class Branch_n_Bound:
         self.is_limit_time = is_limit_time
         self.size = size
         self.destination = destination
+        self.destination_index = None if destination is None else self.nums_of_vertexes - 1
         self.is_debug = is_debug
         self.pq = PriorityQueue()
         self.same_target = {}
@@ -163,13 +164,11 @@ class Branch_n_Bound:
                 Keep reducing the matrix and put the node into the priority queue
         """
         start_time = time.time()
-        if self.nums_of_vertexes > 1 and not self.has_destination:
+        if self.nums_of_vertexes > 1:
             random_index = random.randint(0, self.nums_of_vertexes - 1)
         else:
-            # print((len(self.vertexes)))
             random_index = 0
-        # random_vertexes = []
-        # random_index = 0
+
         random_vertex = self.vertexes[random_index]
         root = PathTreeNode(random_vertex, self.nums_of_vertexes)
         start_matrix = copy.deepcopy(self.matrix)
@@ -190,31 +189,42 @@ class Branch_n_Bound:
             iterate += 1
             # print("pq size: ", self.pq.qsize())
 
-            curr_node = self.pq.get()
+            parent_node = self.pq.get()
 
             # print_matrix(curr_node.matrix)
             curr_time = time.time()
 
             # if all(curr_node.visited):
-            if curr_node.len == self.size:
+            if parent_node.len == self.size:
                 # print("Success!")
                 if self.is_debug:
                     print("size of the path:", self.size)
+                    print("Actual size of the path:", parent_node.len)
+                    print("Actual number of vertexes:", len(parent_node.path))
                     print("Path: ")
-                    for vertex in curr_node.path:
+                    for vertex in parent_node.path:
                         print(vertex.block, end=" ")
-                    print("start_index: ", self.vertexes[random_index].block)
 
-                return self.generate_result(curr_node)
+                    print("start_index: ", self.vertexes[random_index].block)
+                total_path, total_path_description, total_length = self.generate_result(parent_node)
+                return False, total_path, total_path_description, total_length
 
             # elif self.has_destination and curr_node.len == self.size - 1:
             #
             #     return self.generate_result_with_destination(curr_node, self.destination)
 
             # set the limit time, which default is 60 seconds, stop the algorithm and return a result
+
             if self.is_limit_time and self.limit_time and curr_time - start_time > self.limit_time:
-                print("Time is up! Returning what we current got")
-                max_node = curr_node
+
+                # If it needs a destination, return the nearest neighbor result
+                if self.destination is not None:
+                    total_path, total_path_description, total_length = \
+                        NearestNeighbor(self.adjacent_map, self.vertexes, self.size, self.destination).solver()
+                    return True, total_path, total_path_description, total_length
+
+                # Else, return the current best result
+                max_node = parent_node
                 while not self.pq.empty():
                     temp_node = self.pq.get()
                     if max_node.len < temp_node.len:
@@ -228,22 +238,42 @@ class Branch_n_Bound:
                         self.reduce_matrix(new_matrix, next_node)
                         max_node = next_node
 
-                return self.generate_result(max_node)
+                total_path, total_path_description, total_length = self.generate_result(max_node)
+                return True, total_path, total_path_description, total_length
 
+            pre_node = None
             for index in range(self.nums_of_vertexes):
-                if not curr_node.visited[index]:
+
+                # optimization: if the entrance vertex has other same target entrance's vertex has been visited,
+                # then use the same matrix as the previous node, but recalculated the cost
+                if not parent_node.visited[index]:
                     next_vertex = self.vertexes[index]
-                    new_matrix = copy.deepcopy(curr_node.matrix)
+                    if pre_node is not None and next_vertex.is_entrance_of is not None \
+                            and pre_node.vertex.is_entrance_of == next_vertex.is_entrance_of:
+                        # the matrix is the same as the previous node
+                        new_matrix = copy.deepcopy(pre_node.matrix)
+                        next_node = PathTreeNode(next_vertex, self.nums_of_vertexes, pre_node.cost, pre_node)
+                        # need to recalculate the cost, delete the pre reduction
+                        cost = pre_node.cost - parent_node.matrix[parent_node.vertex.index][pre_node.vertex.index]
+                        # add the current reduction
+                        next_node.cost = cost + parent_node.matrix[parent_node.vertex.index][index]
+                        # set the path
+                        next_node.path = parent_node.path + [next_vertex]
+                        next_node.len = parent_node.len + 1
+                        next_node.matrix = new_matrix
 
-                    next_node = PathTreeNode(next_vertex, self.nums_of_vertexes, curr_node.cost, curr_node)
+                    else:
+                        new_matrix = copy.deepcopy(parent_node.matrix)
+                        next_node = PathTreeNode(next_vertex, self.nums_of_vertexes, parent_node.cost, parent_node)
+                        self.reduce_matrix(new_matrix, next_node)
 
-                    self.reduce_matrix(new_matrix, next_node)
-
+                    # Add the route back to the start node
                     if next_node.len == self.size:
                         final_value = next_node.matrix[index][next_node.first_index]
                         if final_value != float("inf"):
                             next_node.cost += final_value
 
+                    pre_node = next_node
                     self.pq.put(next_node)
 
     def reduce_matrix(self, matrix, curr_tree_node):
@@ -277,7 +307,7 @@ class Branch_n_Bound:
 
             # Set the vertex of same target nodes' row and column to infinity
             for index in self.same_target[curr_index]:
-                print("same index with: ", curr_index, " index:", index)
+
                 for i in range(len(matrix)):
                     matrix[i][index] = float("inf")
 
@@ -504,7 +534,7 @@ class Branch_n_Bound:
             self.result.append(self.adjacent_map[path_vertexes[i].index][path_vertexes[i + 1].index])
 
         for edge in self.result:
-            if len(edge.path) == 0:
+            if edge is None or len(edge.path) == 0:
                 continue
             edge.path[0].state = NodeState.STOP
             total_cost += edge.weight
@@ -516,7 +546,8 @@ class Branch_n_Bound:
 
             final_path += edge.path
             final_path_description.append(edge.path_description)
-        final_path[-1].state = NodeState.START
+        if len(final_path) > 0:
+            final_path[-1].state = NodeState.START
         return final_path, final_path_description, total_cost
 
 
@@ -538,7 +569,7 @@ class NearestNeighbor:
     A dummy greedy algorithm to find the nearest vertex to the current vertex for every step
     """
 
-    def __init__(self, adjacent_map, vertexes, size, destination=None):
+    def __init__(self, adjacent_map, vertexes, size, destination=None, is_debug=False):
 
         self.adjacent_map = adjacent_map
         self.vertexes = vertexes
@@ -549,8 +580,9 @@ class NearestNeighbor:
         self.visited = [False] * self.nums_of_vertexes
         self.result = []
         self.destination = destination
+        self.is_debug = is_debug
         self.destination_index = self.nums_of_vertexes - 1
-        # print("Failed to find the optimal solution, using greedy algorithm instead")
+
         for i in range(self.nums_of_vertexes):
             curr_vertex = set()
 
@@ -569,7 +601,6 @@ class NearestNeighbor:
         if self.nums_of_vertexes > 1:
             self.start_index = random.randint(0, self.nums_of_vertexes - 1)
         else:
-            # print((len(self.vertexes)))
             self.start_index = 0
         curr_vertex = self.vertexes[self.start_index]
         return curr_vertex
@@ -631,7 +662,7 @@ class NearestNeighbor:
                     min_edge = edge
                     min_index = i
 
-        if min_edge is None:
+        if self.is_debug and min_edge is None:
             print("Error: ", curr_index, min_index, len(self.result), self.size)
             print(self.visited)
             for i in range(len(self.result)):
@@ -639,6 +670,7 @@ class NearestNeighbor:
             print()
             self.print_adjacent_map()
             input()
+
         self.result.append(min_edge)
         self.backtrack(self.vertexes[min_index])
 
@@ -665,46 +697,23 @@ class NearestNeighbor:
         final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description,
                                                                              total_cost, start_index)
 
-        return final_path, final_path_description, total_cost
-
-    def iterate(self, curr_vertex):
-        """
-        Iterate each step of the algorithm
-        :param curr_vertex: The current vertex
-        """
-
-        curr_index = curr_vertex.index
-        # find an edge with the minimum weight
-        next_min = float("inf")
-        min_edge = None
-        min_index = 0
-        for (i, edge) in enumerate(self.adjacent_map[curr_index]):
-            if edge is not None and edge.weight < next_min and not self.visited[i]:
-                next_min = edge.weight
-                min_edge = edge
-                min_index = i
-        # set the min edge to the next vertex
-        color_edge(min_edge)
-        self.result.append(min_edge)
-
-        # set the current vertex as visited
-        self.visited[curr_index] = True
-        for index in self.same_target[curr_index]:
-            self.visited[index] = True
-
-        return self.vertexes[min_index], min_edge
-
-    def generate_path(self):
-        final_path = []
-        final_path_description = []
-        total_cost = 0
-        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description,
-                                                                             total_cost, len(self.result))
-
-        final_path[-1].state = NodeState.START
+        if len(final_path) > 0 and final_path[-1] is not None:
+            final_path[-1].state = NodeState.START
         return final_path, final_path_description, total_cost
 
     def construct_path(self, final_path, final_path_description, total_cost, end_index, start_index=0):
+        """
+        Construct the path from the result edges, description and total cost
+        Extract blocks of a path from each edge and add them to the final path
+        Set the start and stop state of the path
+
+        :param final_path: The final path
+        :param final_path_description: The final path description
+        :param total_cost: The total cost
+        :param end_index: The end index of the result path
+        :param start_index: The start index of the result path
+        :return: the final path, path description and total cost
+        """
         for i in range(start_index, end_index):
             edge = self.result[i]
             if edge is not None and edge.path is not None and len(edge.path) > 0:
@@ -718,6 +727,10 @@ class NearestNeighbor:
         return final_path, total_cost, final_path_description
 
     def print_adjacent_map(self):
+        """
+        Print the adjacent map
+        For debug purpose
+        """
         for i in range(self.nums_of_vertexes):
             for j in range(self.nums_of_vertexes):
                 if self.adjacent_map[i][j] is not None:

@@ -4,7 +4,7 @@ from time import sleep
 from data import Algorithm, MapData
 from entities import Item, Shelf, Worker
 from service import Map
-from visualize import refresh, print_banner, RenderScreen, waiting
+from visualize import refresh, print_banner, RenderScreen, waiting, spinner
 from tkinter.filedialog import askopenfilename
 
 
@@ -98,7 +98,7 @@ def get_worker_pos():
     while True:
         print()
         print("please enter the worker's starting position")
-        is_default = input("Do you want to use the default position(0,0)? (y/n)")
+        is_default = input("Do you want to use the default position(0,0)? (y/n)" + "\n")
         # If the user wants to use the default position, return a worker with the default position
         if is_default == "y":
             return Worker(0, 0)
@@ -156,6 +156,7 @@ def set_target_id_once(items_map):
     print("Please enter all the target item's id by once: ")
     print("separate each id by a comma, for example: 1,2,3")
     print("(If you forgot the id, you can press 'p' to see all the items' information)")
+    print()
     user_input = input()
     if user_input == "p":
         peek_items(items_map)
@@ -186,14 +187,18 @@ def set_target_id_once(items_map):
 
 def get_time_limit():
     print("-----------------------------------------------------------------------------")
-    choice = input("Do you want to change the time limit ? (y/n) Default is 60 seconds")
+    choice = input("Do you want to change the time limit ? (y/n) Default is 60 seconds" + "\n")
     while True:
         if choice == "y":
             print("Please enter the time limit in seconds: ")
             time_limit = input()
             if time_limit.isnumeric():
+                print()
+                print("Time limit is set to", time_limit, "seconds")
                 return int(time_limit)
             elif is_float(time_limit):
+                print()
+                print("Time limit is set to", time_limit, "seconds")
                 return float(time_limit)
             else:
                 print("Invalid input: ", time_limit, "is not a number")
@@ -210,10 +215,17 @@ def is_float(value):
 
 
 def get_destination():
-    print("-----------------------------------------------------------------------------")
-    choice = input("Do you want to set a destination ? (y/n) Default contains no destination")
+    """
+    The get_destination function prompts the user to enter a destination.
+    If the user wants to use the default destination, the function returns None.
+    If the user wants to enter a custom destination, the function prompts the user to enter the destination
+    The function then returns the destination.
+    """
     while True:
+        print("-----------------------------------------------------------------------------")
+        choice = input("Do you want to set a destination ? (y/n) Default contains no destination" + "\n")
         if choice == "y":
+            print("If you set a destination outside the map, the destination will not be counted")
             print("Please enter the destination x-coordinate: ")
             destination_x = input()
             if destination_x.isnumeric():
@@ -248,8 +260,7 @@ def initialize_data():
     worker = get_worker_pos()
     destination = get_destination()
     time_limit = get_time_limit()
-    access_mode = set_access_mode()
-    map_data = MapData(worker, shelves, items, targets, time_limit=time_limit, access_mode=access_mode, destination=destination)
+    map_data = MapData(worker, shelves, items, targets, time_limit=time_limit, destination=destination)
 
     return map_data
 
@@ -269,6 +280,7 @@ def set_targets_one_by_one(items_map):
         print()
         print("Please enter each target items' ID, then press 'enter', if you are done, press 'q' to quit")
         print("(If you forgot the id, you can press 'p' to see all the items' information)")
+        print()
         curr = input()
         if curr == "q":
             return target_items
@@ -305,7 +317,7 @@ def set_target_from_file(items_map):
 
         except FileNotFoundError:
             print("Error: File not found. Please make sure your file is in the same directory as this program.")
-            choice = input("Would you like to upload your file manually? (y/n)")
+            choice = input("Would you like to upload your file manually? (y/n) " + "\n")
             if choice == "y":
                 print("A file explorer will open. Please select your file.")
                 file_path = askopenfilename()
@@ -318,7 +330,7 @@ def set_target_from_file(items_map):
             print("An error occurred:", e)
 
     order_list = [line.split(', ') for line in lines if line]
-    order_list_row = input('Please enter which order row you want to proceed. (Start at 1)')
+    order_list_row = input('Please enter which order row you want to proceed. (Start at 1)' + "\n")
     curr_order = order_list[int(order_list_row) - 1]
     target_items = []
     for target_id in curr_order:
@@ -330,7 +342,7 @@ def set_target_from_file(items_map):
             else:
                 print("Cannot find item with id:", converted_id)
                 return set_target_from_file(items_map)
-
+    print("Target items' IDs are: ", list(map(lambda x: x.item_id, target_items)))
     return target_items
 
 
@@ -368,7 +380,6 @@ def set_access_mode():
     print("-----------------------------------------------------------------------------")
     print("Press 1 to set access mode to 'single access point'")
     print("Press 2 to set access mode to multiple access point'")
-    print("Warning: Current version of the program will not be able to find the optimal path for multiple access point")
     print("-----------------------------------------------------------------------------")
     while True:
         choice = input()
@@ -418,7 +429,7 @@ def find_path(map_data):
 
     refresh()
     map_service = Map(map_data)
-    render = RenderScreen(waiting)
+    render = RenderScreen(spinner)
     render.start()
     map_service.init_for_tsp()
     render.stop()
@@ -431,8 +442,7 @@ def find_path(map_data):
         print('-------------------------------------------------------------------------------------------------------')
         print()
         print("Welcome to the lazy picker for warehouse!")
-        print("Press '1' to find a short path(using Branch and Bound), '2' to find the path faster (using Dummy "
-              "Greedy),")
+        print("Press '1' to find the path for you")
         print("Press 'r' to return to the main menu")
         print()
         print('-------------------------------------------------------------------------------------------------------')
@@ -442,12 +452,8 @@ def find_path(map_data):
         if choice == '1':
             # render = RenderScreen(map_service.print_map_single_search)
             # render.start()
-            map_service.tsp("branch_and_bound")
-            to_be_continue(map_data, map_service)
-
-        elif choice == '2':
-            map_service.tsp("nearest_neighbor")
-            to_be_continue(map_data, map_service)
+            map_service.tsp()
+            map_service = to_be_continue(map_data)
 
         elif choice == 'r':
             display_menu(map_data)
@@ -456,19 +462,76 @@ def find_path(map_data):
             print('Invalid input...')
 
 
-def to_be_continue(map_data, map_service):
+def to_be_continue(map_data):
     while True:
         key = input('Press c to continue... if you want to quit, press q')
         if key == 'c':
-            render = RenderScreen(map_service.print_map_single_search)
+            render = RenderScreen(spinner)
             render.start()
             map_service = Map(map_data)
             map_service.init_for_tsp()
             render.stop()
+            sleep(0.8)
+            refresh()
+            map_service.print_map()
+            return map_service
         elif key == 'q':
             display_menu(map_data)
         else:
             print('Invalid input...')
+
+
+def set_tsp_algorithm():
+    """
+    The set_tsp_algorithm function prompts the user to select an algorithm.
+    It then returns the corresponding algorithm.
+
+    :return: The algorithm
+    """
+
+    print("-----------------------------------------------------------------------------")
+    print("Press 1 to set tsp algorithm to 'branch and bound'")
+    print("Press 2 to set tsp algorithm to 'nearest neighbor'")
+    print("-----------------------------------------------------------------------------")
+    while True:
+        choice = input()
+        if choice == "1":
+            print()
+            print("branch and bound is selected")
+            return "branch_and_bound"
+        elif choice == "2":
+            print()
+            print("nearest neighbor is selected")
+            return "nearest_neighbor"
+        else:
+            print("Invalid input")
+
+
+def set_debug_mode():
+    """
+    The set_debug_mode function prompts the user to select a debug mode.
+    It then returns the corresponding debug mode.
+
+    :return: The debug mode
+    """
+
+    print("-----------------------------------------------------------------------------")
+    print("Press 1 to set debug mode to 'on'")
+    print("Press 2 to set debug mode to 'off'")
+    print("-----------------------------------------------------------------------------")
+    print()
+    while True:
+        choice = input()
+        if choice == "1":
+            print()
+            print("debug mode is on")
+            return True
+        elif choice == "2":
+            print()
+            print("debug mode is off")
+            return False
+        else:
+            print("Invalid input")
 
 
 def setting(map_data):
@@ -483,9 +546,13 @@ def setting(map_data):
     print()
 
     while True:
+        print("-----------------------------------------------------------------------------")
         print("Welcome to the setting menu!")
         print("Please enter '1' to set a new target item, '2' to set a new start point, ")
-        print("'3' to set a new algorithm, 'r' to return to the main menu")
+        print("'3' to set a new destination, '4' to set a new access mode, 5 to set a new algorithm for tsp")
+        print("'6' to set a new time limit, '7' to set a debug mode, '8' to set a point to point base algorithm")
+        print("'r' to return to the main menu")
+        print("-----------------------------------------------------------------------------")
         choice = input()
         if choice == "1":
             new_targets = set_targets(map_data.items)
@@ -496,7 +563,28 @@ def setting(map_data):
             map_data.update("worker", new_worker)
 
         elif choice == "3":
-            algo = input("Please enter the algorithm you want to use: 1. A* 2. BFS 3. Dijkstra 4. DFS")
+            new_destination = get_destination()
+            map_data.update("destination", new_destination)
+
+        elif choice == "4":
+            new_access_mode = set_access_mode()
+            map_data.update("access_mode", new_access_mode)
+
+        elif choice == "5":
+            new_tsp_algorithm = set_tsp_algorithm()
+            map_data.update("algorithm", new_tsp_algorithm)
+
+        elif choice == "6":
+            new_time_limit = get_time_limit()
+            map_data.update("time_limit", new_time_limit)
+
+        elif choice == "7":
+            new_debug_mode = set_debug_mode()
+            map_data.update("is_debug", new_debug_mode)
+
+        elif choice == "8":
+            algo = input("Please enter the algorithm you want to use for calculating point to point:"
+                         " 1. A* 2. BFS 3. Dijkstra 4. DFS")
             if algo == "1":
                 map_data.update("algorithm", Algorithm.A_STAR)
             elif algo == "2":

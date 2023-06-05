@@ -1,6 +1,4 @@
-import math
 import os
-import sys
 import threading
 import time
 
@@ -12,21 +10,25 @@ class RenderScreen(threading.Thread):
         self.func = func
 
     def run(self):
+        """
+        Override the run() function of threading.Thread class.
+        All the rendering should be written here.
+        """
         while self.running:
             # Do your rendering here
             refresh()
             self.func()
-            time.sleep(0.2)
-
-            # sys.stdout.write(next(self.func))
-            # sys.stdout.flush()
-            # time.sleep(0.1)
-            # sys.stdout.write('\b')
 
     def stop(self):
+        """
+        Stop the rendering.
+        """
         self.running = False
 
     def switch_func(self, func):
+        """
+        Switch the function to be rendered.
+        """
         self.func = func
 
 
@@ -55,8 +57,11 @@ def print_banner():
 
 
 def waiting():
-    """ Used to print the waiting screen."""
-    print("Loading...")
+    """
+    Used to print the waiting screen.
+    An animation of a falling object.
+    """
+    print("Calculating the route, please wait patiently...")
     frames = ["""
     -----
     |   |
@@ -89,8 +94,12 @@ def waiting():
 
 
 def spinner():
-    """ Used to print the waiting screen."""
+    """
+    Used to print the waiting screen.
+    An animation of a spinner.
+    """
     frames = ['|     |', '/     /', '-     -', '\\     \\', '|     |']
     for frame in frames:
-        print("Calculating routes, please wait patiently..." + frame, end='\r')  # Print the frame and move the cursor back to the beginning of the line
-        time.sleep(0.2)  # Adjust the delay as desired
+        print("Loading the map, please wait patiently..." + frame, end='\r')
+        # Print the frame and move the cursor back to the beginning of the line
+        time.sleep(0.1)  # Adjust the delay as desired

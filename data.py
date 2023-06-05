@@ -16,7 +16,8 @@ class Algorithm(Enum):
 class MapData:
     """A class to store the data for the map."""
 
-    def __init__(self, worker, shelves, items, targets, destination=None, time_limit=60, algorithm=Algorithm.A_STAR, map_row=40, map_col=21,access_mode="multiple"):
+    def __init__(self, worker, shelves, items, targets, destination=None, time_limit=60, tsp_algo="branch_and_bound",
+                 algorithm=Algorithm.A_STAR, map_row=40, map_col=21, is_debug=False, access_mode="multiple"):
         self.worker_org = worker.pos
         self.map_row = map_row
         self.map_col = map_col
@@ -25,7 +26,9 @@ class MapData:
         self.items = items
         self.targets = targets
         self.destination = destination
+        self.is_debug = is_debug
         self.time_limit = time_limit
+        self.tsp_algo = tsp_algo
         self.algorithm = algorithm
         self.access_mode = access_mode
 
@@ -66,8 +69,18 @@ class MapData:
             self.items = value
         elif attribute == "targets":
             self.targets = value
+        elif attribute == "destination":
+            self.destination = value
+        elif attribute == "is_debug":
+            self.is_debug = value
+        elif attribute == "time_limit":
+            self.time_limit = value
+        elif attribute == "tsp_algo":
+            self.tsp_algo = value
         elif attribute == "algorithm":
             self.algorithm = value
+        elif attribute == "access_mode":
+            self.access_mode = value
         else:
             print("Invalid attribute")
 
@@ -88,7 +101,14 @@ class MapData:
             "map_col": self.map_col,
             "worker": self.worker.toJSON(),
             "shelves": json.dumps(self.shelves, default=lambda o: o.toJSON(), indent=4),
-            "items": json.dumps(self.items, default=lambda o: o.toJSON(), indent=4)
+            "items": json.dumps(self.items, default=lambda o: o.toJSON(), indent=4),
+            "targets": json.dumps(self.targets, default=lambda o: o.toJSON(), indent=4),
+            "destination": self.destination,
+            "is_debug": self.is_debug,
+            "time_limit": self.time_limit,
+            "tsp_algo": self.tsp_algo,
+            "algorithm": self.algorithm.value,
+            "access_mode": self.access_mode
         }
 
 
