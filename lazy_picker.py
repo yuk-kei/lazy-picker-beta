@@ -209,6 +209,28 @@ def is_float(value):
         return False
 
 
+def get_destination():
+    print("-----------------------------------------------------------------------------")
+    choice = input("Do you want to set a destination ? (y/n) Default contains no destination")
+    while True:
+        if choice == "y":
+            print("Please enter the destination x-coordinate: ")
+            destination_x = input()
+            if destination_x.isnumeric():
+                print("Please enter the destination y-coordinate: ")
+                destination_y = input()
+                if destination_y.isnumeric():
+                    return int(destination_x), int(destination_y)
+                else:
+                    print("Invalid input: ", destination_y, "is not a number")
+            else:
+                print("Invalid input: ", destination_x, "is not a number")
+        elif choice == "n":
+            return None
+        else:
+            print("Invalid input: ", choice)
+
+
 def initialize_data():
     """
     The initialize_data function reads the data from the database file to get the items and shelves,
@@ -224,14 +246,23 @@ def initialize_data():
 
     targets = set_targets(items)
     worker = get_worker_pos()
+    destination = get_destination()
     time_limit = get_time_limit()
     access_mode = set_access_mode()
-    map_data = MapData(worker, shelves, items, targets, time_limit=time_limit, access_mode=access_mode)
+    map_data = MapData(worker, shelves, items, targets, time_limit=time_limit, access_mode=access_mode, destination=destination)
 
     return map_data
 
 
 def set_targets_one_by_one(items_map):
+    """
+    The set_target_item function takes in a list of items and prompts the user to enter an item id.
+    If the input is not numeric, it will prompt again until a valid number is entered.
+    It then checks if that number matches any of the item ids in the list, and returns that item if so.
+
+    :param items_map: Pass the list of items to the function
+    :return: The target item
+    """
     count = 0
     target_items = []
     while True:
@@ -256,6 +287,14 @@ def set_targets_one_by_one(items_map):
 
 
 def set_target_from_file(items_map):
+    """
+    The set_target_item function takes in a list of items and prompts the user to enter an item id.
+    If the input is not numeric, it will prompt again until a valid number is entered.
+    It then checks if that number matches any of the item ids in the list, and returns that item if so.
+
+    :param items_map: Pass the list of items to the function
+    :return: The target item
+    """
     file_path = "qvBox-warehouse-orders-list-part01.txt"
     while True:
         try:
@@ -296,6 +335,13 @@ def set_target_from_file(items_map):
 
 
 def set_targets(items):
+    """
+    The set_target_item function takes in a list of items and prompts the user to enter an item id.
+    If the input is not numeric, it will prompt again until a valid number is entered.
+    It then checks if that number matches any of the item ids in the list, and returns that item if so.
+
+    :param items: Pass the list of items to the function
+    """
     print("-----------------------------------------------------------------------------")
     print("Press 1 to set target items one by one")
     print("Press 2 to enter all target items by once")
@@ -316,6 +362,9 @@ def set_targets(items):
 
 
 def set_access_mode():
+    """
+    The set_access_mode function prompts the user to choose single or multiple access point mode.
+    """
     print("-----------------------------------------------------------------------------")
     print("Press 1 to set access mode to 'single access point'")
     print("Press 2 to set access mode to multiple access point'")
@@ -361,10 +410,8 @@ def find_path(map_data):
     """
     The find_path function takes in a MapData object and prompts the user to select an algorithm.
     It then calls the corresponding function in the Map class.
-    If the user input 1, it calls the a_star function in the Map class.
-    If the user input 2, it calls the bfs function in the Map class.
-    If the user input 3, it calls the dijkstra function in the Map class.
-    If the user input 4, it calls the dfs function in the Map class.
+    If the user input 1, it calls the branch and bound function in the Map class.
+    If the user input 2, it calls the dummy greedy in the Map classS
 
     :param map_data: Pass the MapData object to the function
     """

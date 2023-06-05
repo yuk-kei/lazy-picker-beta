@@ -12,7 +12,7 @@
 
 
 
-**Version:** Beta 1.0.0
+**Version:** Beta v2.0.0
 
 
 
@@ -70,6 +70,8 @@
 - **TSP:** The Traveling Salesman Problem (TSP) is a classic optimization problem in computer science and mathematics. It involves finding the shortest possible route that a salesman can take to visit a given set of cities and return to the starting point, while visiting each city exactly once. The problem is considered to be NP-hard, meaning that no efficient algorithm exists to solve it for large problem instances, and it often requires the use of approximation algorithms or heuristics to find near-optimal solutions.
 
 - **Branch and bound:**  Branch and Bound is an algorithmic technique that systematically explores the solution space of optimization problems, like the Traveling Salesman Problem. It prunes suboptimal branches and partitions the problem into smaller subproblems, using lower bounds to guide the search. By iteratively branching and bounding, it aims to find the optimal or near-optimal solution efficiently.
+
+- **Nearest Neighbor:** The Nearest Neighbor algorithm is a heuristic for the Traveling Salesman Problem. It starts at an arbitrary city and repeatedly chooses the nearest unvisited city until all cities have been visited. While not optimal, it provides decent solutions for smaller TSP instances.
 
 - **A Star:** A search algorithm used to find the relative short path between two points in a graph. It is widely used in game development and robotics.
 
@@ -206,7 +208,7 @@ def peek_items(items):
 	"""
 
 
-def set_target_item(items):
+def set_targets(items):
     """
     The set_target_item function takes in a list of items and prompts the user to enter an item id.
     If the input is not numeric, it will prompt again until a valid number is entered.
@@ -217,6 +219,35 @@ def set_target_item(items):
     :author: Jiati Zhao
     """
 
+def set_target_id_once(items_map):
+    """
+    The set_target_item function takes in a list of items and prompts the user to enter an item id.
+    If the input is not numeric, it will prompt again until a valid number is entered.
+    It then checks if that number matches any of the item ids in the list, and returns that item if so.
+
+    :param items_map: a dict, mapping items id with  Item
+    :return: The target item
+    """
+
+def set_targets_one_by_one(items_map):
+    """
+    The set_target_item function takes in a list of items and prompts the user to enter an item id.
+    If the input is not numeric, it will prompt again until a valid number is entered.
+    It then checks if that number matches any of the item ids in the list, and returns that item if so.
+        
+    :param items_map: Pass the list of items to the function
+    :return: The target item
+    """
+
+def set_target_from_file(items_map):
+    """
+    The set_target_item function takes in a list of items and prompts the user to enter an item id.
+    If the input is not numeric, it will prompt again until a valid number is entered.
+    It then checks if that number matches any of the item ids in the list, and returns that item if so.
+    
+    :param items_map: Pass the list of items to the function
+    :return: The target item
+    """    
 
 def initialize_data():
     """
@@ -229,6 +260,12 @@ def initialize_data():
     :return: A MapData object, which contains all the data needed to create a map
     :author: Jiati Zhao
     """
+
+def set_access_mode():
+    """
+    The set_access_mode function prompts the user to choose single or multiple access point mode.
+    """
+    
 
 def display_welcome():
     """ Displays the welcome screen for the program.
@@ -288,13 +325,25 @@ class Algorithm(Enum):
 	:author: Yukkei
     """
 
+class NodeState(Enum):
+    """
+    An enumeration of the different states that a node can be in;
+    0: GOAL, represents the target node(the target item); 1: NEW, represents a node that has not been visited;
+    2: OPEN, represents a node in the open list(will be visited in the future);
+    3: BLOCK, represents a node that is a shelf; 4: PATH, represents a node that is in the path
+    5: CLOSE, represents a node that has been visited; 6: START, represents the starting node(worker start position)
+    7: STOP, represents the access point of the shelf
+    
+    :author: Yukkei
+    """
+
 
 class MapData:
     """ 
     A class to store the data for the map.
     """
 
-    def __init__(self, worker, shelves, items, target, algorithm=Algorithm.A_STAR, map_row=40, map_col=21):
+    def __init__(self, worker, shelves, items, targets, destination=None, time_limit=60, algorithm=Algorithm.A_STAR, map_row=40, map_col=21,access_mode="multiple"):
 
     def update(self, attribute, value):
         """
@@ -436,18 +485,6 @@ class Worker(Entity):
 #### service
 
 ``` python
-class NodeState(Enum):
-    """
-    An enumeration of the different states that a node can be in;
-    0: GOAL, represents the target node(the target item); 1: NEW, represents a node that has not been visited;
-    2: OPEN, represents a node in the open list(will be visited in the future);
-    3: BLOCK, represents a node that is a shelf; 4: PATH, represents a node that is in the path
-    5: CLOSE, represents a node that has been visited; 6: START, represents the starting node(worker start position)
-    
-    :author: Yukkei
-    """
-
-
 class Block:
     def __init__(self, x, y):
 
@@ -518,7 +555,26 @@ class Map:
     """A class to represent the map of the warehouse."""
 
     def __init__(self, map_data):
+        
+    def init_for_tsp(self):
+        """
+        Initialize the map for the TSP algorithm.
+        First, set all the target nodes.
+        Second, set the adjacency map.
+        """
 
+    def find_single_target(self, start=None, target=None):
+        """
+        Find the shortest path to a single target. the algorithm defaults to A*. But you can change it to other algorithms.
+
+        :param start: The start node
+        :param target: The target node
+        :return: A list of nodes representing the path from the worker to the target.
+        """
+    def reset_map(self):
+        """
+        Reset the map for the next iteration.
+        """
         
     def iterate(self, algorithm):
         """
@@ -529,6 +585,18 @@ class Map:
         :param curr: The current node
         :return: A list of nodes representing the path from the worker to the target.
         :author: Yukkei 
+        """
+   	
+    def set_target_entrances(self):
+        """
+        A function to set the state of the nodes in the target entrances to TARGET.
+        """
+
+    def set_adjacency_map(self, all_path_nodes):
+        """
+        A function to set the adjacency map of the nodes in the total path.
+        The function will check all the nodes in the total path and do the following:
+
         """
 	
     
@@ -543,6 +611,13 @@ class Map:
         :author: Jiati Zhao
         """
 
+        
+    def tsp(self, algorithm="branch_and_bound"):
+        """
+        The main function to solve the TSP problem. It calls the tsp extensition's method to solve
+        :param algorithm: The algorithm to solve the TSP problem. The default is branch and bound.
+        :return: The total path, the total path description and the total length.
+        """
         
     def astar_iterate(self, curr):
 		""" 
@@ -742,11 +817,12 @@ class Branch_n_Bound:
     def reduce_matrix(self, matrix, curr_tree_node):
         """
         Reduce Matrix (rows & columns to at least one 0) = reduced cost
-        1. If it is not the root node, reduce the matrix by pre to curr
-        2. Set the same target row and column to infinity
-        2. Reduce the matrix by finding the minimum value in each row and subtracting it from each element of that row
-        3. Set the visited vertex to True
-        4. Set the same target vertex to True
+        1. Set the vertex of same target nodes' row and column to infinity
+        2. If it is a root node, reduce the matrix to get the main reduced cost
+        3. Else, the main reduced cost is the parent's main reduced cost
+            3.1 get the matrix[pre_index][curr_index] the value as reduction
+            3.2 reduce the matrix to get the reduced cost
+            3.3 set the current node's cost to the parent's cost + reduction + reduced cost
         """
         
     def set_matrix(self):
@@ -755,7 +831,53 @@ class Branch_n_Bound:
         If the adjacent map is None, set the matrix to infinity
         Else set the matrix to the weight of the edge
         """
+	
+    def generate_result(self, curr_node):
+        """
+        Generate the result of the TSP problem by the final node of the tree
+           
+        :param curr_node: the current node
+        :return: the final path
+        """
+class NearestNeighbor:
+    """
+    A dummy greedy algorithm to find the nearest vertex to the current vertex for every step
+    """
 
+    def __init__(self, adjacent_map, vertexes, size):
+        
+        
+    def choose_first_vertex(self):
+        """
+        Choose the first vertex randomly
+        :return: The first vertex
+        """      
+        
+    def solver(self):
+        """
+        Solve the problem using the nearest neighbor algorithm
+        :return: the result path, path description and total cost    
+        """
+    
+    def backtrack(self, curr_vertex):
+        """
+        Backtrack until find the answer
+
+        :param curr_vertex: The current vertex
+        """
+     
+    def iterate(self, curr_vertex):
+        """
+        Iterate each step of the algorithm
+        :param curr_vertex: The current vertex
+        """
+        
+    def generate_result(self):
+        """
+        Generate the result path
+        :return: the result path, path description and total cost
+        """
+        
         
 def print_matrix(matrix):
     """
@@ -763,6 +885,12 @@ def print_matrix(matrix):
     Iterate through the matrix and print each element
     :param matrix: The matrix to be printed
     """
+
+def color_edge(edge):
+    """
+    Color the edges    
+    :param edge: The edge
+    """  
 
 class Edge:
     def __init__(self, node1, node2, path, path_description):
@@ -870,7 +998,7 @@ To use the program, the user need to have
 
 1.  Calls the `read_map_data()` function to read the data from the file.
 2.  Calls the `get_worker_pos` function to get the worker's starting position.
-3. Calls the `set_target_item` function to get the target item.
+3. Calls the `set_targets` function to get the target item.
 4. Generates a `MapData` object with the data it got from the previous functions.
 
 ``` python
@@ -1078,47 +1206,53 @@ We have encapsulated some necessary helper functions for algorithm implementatio
 
 ``` python
 class Map:
-	```	.........
+    
+    
+    def get_neighbours(self, curr):
+    """
+    A function to get the neighbours of the current node.
+    :param curr: The current node
+    :return: A list of nodes representing the neighbours of the current node.
+    """
+
+    directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+    neighbours = []
+
+    # Check all the neighbours of the current node
+    # If the neighbour is not a block(Shelf), then add it to the list
+    for x_diff, y_diff in directions:
+        x = curr.x + x_diff
+        y = curr.y + y_diff
+        if 0 <= x < self.map_row and 0 <= y < self.map_col:
+            if self.grid[x][y].state != NodeState.BLOCK:
+                neighbours.append(self.grid[x][y])
+    return neighbours
+    
+    
+        
+	def get_path(self, curr):
+	    self.has_path = True
+	    curr.state = NodeState.GOAL
+	    self.path.append(curr)
+	    # Start from the target and reach the start node recursively
+	    while curr.parent is not None:
+	        curr = curr.parent
+	        curr.state = NodeState.PATH
+	        self.path.append(curr)
+	
+	    curr.state = NodeState.START
+	
+	    # Reverse the path to get the correct order
+	    self.path.reverse()
+	    self.visualize(False)
+	    self.print_path_description()
 ```
 
-    def get_neighbours(self, curr):
-        """
-        A function to get the neighbours of the current node.
-        :param curr: The current node
-        :return: A list of nodes representing the neighbours of the current node.
-        """
-    
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-        neighbours = []
-    
-        # Check all the neighbours of the current node
-        # If the neighbour is not a block(Shelf), then add it to the list
-        for x_diff, y_diff in directions:
-            x = curr.x + x_diff
-            y = curr.y + y_diff
-            if 0 <= x < self.map_row and 0 <= y < self.map_col:
-                if self.grid[x][y].state != NodeState.BLOCK:
-                    neighbours.append(self.grid[x][y])
-        return neighbours
+   
 
 
-​    
-​	def get_path(self, curr):
-​	    self.has_path = True
-​	    curr.state = NodeState.GOAL
-​	    self.path.append(curr)
-​	    # Start from the target and reach the start node recursively
-​	    while curr.parent is not None:
-​	        curr = curr.parent
-​	        curr.state = NodeState.PATH
-​	        self.path.append(curr)
-​	
-​	    curr.state = NodeState.START
-​	
-​	    # Reverse the path to get the correct order
-​	    self.path.reverse()
-​	    self.visualize(False)
-​	    self.print_path_description()
+
+
 #### A Star Search
 
 A star search will keep iterating until it finds a path from the worker to the target. In each iteration, it will pick the first node from the open list, which is the node with the lowest final cost, and call the function `astar_iterate()`.  The function will check all the neighbours of the current node and do the following:
@@ -1293,12 +1427,13 @@ class Branch_n_Bound:
                 Keep reducing the matrix and put the node into the priority queue
         """
         start_time = time.time()
-        if self.nums_of_vertexes > 1:
+        if self.nums_of_vertexes > 1 and not self.has_destination:
             random_index = random.randint(0, self.nums_of_vertexes - 1)
         else:
             # print((len(self.vertexes)))
             random_index = 0
-        random_vertexes = []
+        # random_vertexes = []
+        # random_index = 0
         random_vertex = self.vertexes[random_index]
         root = PathTreeNode(random_vertex, self.nums_of_vertexes)
         start_matrix = copy.deepcopy(self.matrix)
@@ -1313,23 +1448,33 @@ class Branch_n_Bound:
             self.reduce_matrix(start_matrix, root)
             self.pq.put(root)
 
+        print("Initial end")
         iterate = 0
         while not self.pq.empty():
             iterate += 1
+            # print("pq size: ", self.pq.qsize())
 
             curr_node = self.pq.get()
 
+            # print_matrix(curr_node.matrix)
             curr_time = time.time()
 
             # if all(curr_node.visited):
             if curr_node.len == self.size:
-
+                # print("Success!")
+                # print("Path: ")
+                # for vertex in curr_node.path:
+                #     print(vertex.block, end=" ")
                 print("start_index: ", self.vertexes[random_index].block)
-                print("what the fuck")
+
                 return self.generate_result(curr_node)
 
-            # set the limit time, which is 14 seconds, stop the algorithm and return a result
-            if self.limit_time and curr_time - start_time > 14:
+            elif self.has_destination and curr_node.len == self.size - 1:
+
+                return self.generate_result_with_destination(curr_node, self.destination)
+
+            # set the limit time, which default is 60 seconds, stop the algorithm and return a result
+            if self.is_limit_time and self.limit_time and curr_time - start_time > self.limit_time:
                 print("Time is up! Returning what we current got")
                 max_node = curr_node
                 while not self.pq.empty():
@@ -1341,11 +1486,8 @@ class Branch_n_Bound:
                     if not max_node.visited[index]:
                         next_vertex = self.vertexes[index]
                         new_matrix = copy.deepcopy(max_node.matrix)
-
                         next_node = PathTreeNode(next_vertex, self.nums_of_vertexes, max_node.cost, max_node)
-
                         self.reduce_matrix(new_matrix, next_node)
-
                         max_node = next_node
 
                 return self.generate_result(max_node)
@@ -1357,28 +1499,64 @@ class Branch_n_Bound:
 
                     next_node = PathTreeNode(next_vertex, self.nums_of_vertexes, curr_node.cost, curr_node)
                     self.reduce_matrix(new_matrix, next_node)
-                    if next_node.len == self.size:
-                        return self.generate_result(next_node)
-                    self.pq.put(next_node)
 
+                    self.pq.put(next_node)
 
     def reduce_matrix(self, matrix, curr_tree_node):
         """
         Reduce Matrix (rows & columns to at least one 0) = reduced cost
-        1. If it is not the root node, reduce the matrix by pre to curr
-        2. Set the same target row and column to infinity
-        2. Reduce the matrix by finding the minimum value in each row and subtracting it from each element of that row
-        3. Set the visited vertex to True
-        4. Set the same target vertex to True
+        1. Set the vertex of same target nodes' row and column to infinity
+        2. If it is a root node, reduce the matrix to get the main reduced cost
+        3. Else, the main reduced cost is the parent's main reduced cost
+            3.1 get the matrix[pre_index][curr_index] the value as reduction
+            3.2 reduce the matrix to get the reduced cost
+            3.3 set the current node's cost to the parent's cost + reduction + reduced cost
         """
 
         # input("Press Enter to continue...")
         curr_vertex = curr_tree_node.vertex
         curr_index = curr_vertex.index
         curr_tree_node.visited[curr_index] = True
-        # if it is reduced by pre to curr
+        self.ignore_same_target_entrance(curr_index, curr_tree_node, matrix)
+        # if curr_tree_node.parent is None: it is a root node
+        if curr_tree_node.parent is None:
 
-        # ignore the same target
+            reduce_cost, matrix = self.reduce_row_n_col(matrix)
+            curr_tree_node.cost = reduce_cost
+            print_matrix(matrix)
+            # ignore the entrance with same target as current vertex
+
+        else:
+            # if it is not the root node
+  
+            parent = curr_tree_node.parent
+            pre_vertex = parent.vertex
+            pre_index = pre_vertex.index
+            first_index = curr_tree_node.first_index
+
+            main_reduce_cost = parent.cost
+            reduction = matrix[pre_index][curr_index]
+
+
+            # delete the row of the pre_vertex
+            for j in range(len(matrix)):
+                matrix[pre_index][j] = float("inf")
+            # delete the column of the curr_vertex
+            for i in range(len(matrix)):
+                matrix[i][curr_index] = float("inf")
+
+            matrix[curr_index][first_index] = float("inf")
+
+            reduce_cost, matrix = self.reduce_row_n_col(matrix)
+
+            curr_tree_node.cost += reduction
+            curr_tree_node.cost += reduce_cost
+
+
+        curr_tree_node.matrix = matrix
+        print("------------------------------------------")
+
+    def ignore_same_target_entrance(self, curr_index, curr_tree_node, matrix):
         for index in self.same_target[curr_index]:
             curr_tree_node.visited[index] = True
             # set the row and column of the same target to inf
@@ -1387,64 +1565,45 @@ class Branch_n_Bound:
             for j in range(len(matrix)):
                 matrix[index][j] = float("inf")
 
-        if curr_tree_node.parent is not None:
+    def reduce_row_n_col(self, matrix):
 
-            parent = curr_tree_node.parent
-            pre_vertex = parent.vertex
-            pre_index = pre_vertex.index
 
-            reduced_cost = 0
+        reduced_cost = 0
+        for i in range(len(matrix)):
 
-            # print_matrix(matrix)
-            # reduce row
-            for i in range(len(matrix)):
+            row = matrix[i]
+            # get the min value of the row
+            min_value = min(row)
+            print(min_value, end=" ")
+            if min_value == float("inf") or min_value == 0:
+                continue
 
-                row = matrix[i]
-                # get the min value of the row
-                min_value = min(row)
-                print("min_value: ", min_value)
-                if min_value == float("inf") or min_value == 0:
-                    continue
+            else:
+                # reduce each element of the row by the min value
+                for j in range(len(row)):
+                    if row[j] != float("inf") and row[j] != 0:
+                        row[j] -= min_value
+                matrix[i] = row
+                # get the total cost of each row
+                reduced_cost += min_value
 
-                else:
-                    # reduce each element of the row by the min value
-                    for j in range(len(row)):
-                        if row[j] != float("inf") and row[j] != 0:
-                            row[j] -= min_value
-                    matrix[i] = row
-                    # get the total cost of each row
-                    reduced_cost += min_value
 
-            # reduce column
-            for j in range(len(matrix[0])):
-                column = [row[j] for row in matrix]
-                min_value = min(column)
-                if min_value == float("inf") or min_value == 0:
-                    continue
-                else:
-                    # reduce each element of the column by the min value
-                    for i in range(len(column)):
-                        if column[i] != float("inf") and column[i] != 0:
-                            column[i] -= min_value
-                    for i in range(len(matrix)):
-                        matrix[i][j] = column[i]
-                    reduced_cost += min_value
+        for j in range(len(matrix[0])):
+            column = [row[j] for row in matrix]
+            min_value = min(column)
+            print(min_value, end=" ")
+            if min_value == float("inf") or min_value == 0:
+                continue
+            else:
+                # reduce each element of the column by the min value
+                for i in range(len(column)):
+                    if column[i] != float("inf") and column[i] != 0:
+                        column[i] -= min_value
+                for i in range(len(matrix)):
+                    matrix[i][j] = column[i]
+                reduced_cost += min_value
 
-            reduction = matrix[pre_index][curr_index]
-            # delete the row of the pre_vertex
-            for j in range(len(matrix)):
-                matrix[pre_index][j] = float("inf")
-            # delete the column of the curr_vertex
-            for i in range(len(matrix)):
-                matrix[i][curr_index] = float("inf")
-
-            print_matrix(matrix)
-
-            print("End reduce matrix")
-            # input("Press Enter to continue...")
-            curr_tree_node.cost += reduction
-            curr_tree_node.cost += reduced_cost
-        curr_tree_node.matrix = matrix
+        return reduced_cost, matrix
 
     def generate_result(self, curr_node):
         """
@@ -1575,8 +1734,15 @@ We have created a highly extensible algorithm framework that allows you to add y
 | Basic Feature fulfilled            | whole Team | In Progress   | SAT,May 06  | Merge Code  |
 | Pass testing                       | whole Team | Not yet start | Mon, May 08 | Bugs fixing |
 
-- beta:
-  - Implement the travel - sales man extension
+- beta v1:
+  - Implement the travel - sales man extension(Branch and bound)
+  - Enhance error handling and UI elements
+- beta v2:
+  - Add nearest neighbors' algorithm
+  - Trying to fix the bugs occur in the  multiple access point case with branch and bound
+  - Allow user to upload their own file through file picker.
+
+
 
 ### Team member responsibilities
 
@@ -1603,6 +1769,10 @@ This section provides solutions for common issues that you may encounter while u
 ###  Error handling 1: Input Error handling
 
 The application has built-in error handling to prevent the user from entering invalid input. If invalid input is entered, the application will provide an error message indicating the issue.
+
+### Error handling 2: File not find error handling
+
+If there is an issue with the input file, the program should not crash
 
 ### Maintain Repo Address:
 

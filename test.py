@@ -4,7 +4,7 @@ from data import MapData
 from entities import Worker
 from lazy_picker import read_map_data
 from service import Map, Block
-from visualize import RenderScreen, waiting
+from visualize import RenderScreen, waiting, spinner
 
 """--------------------------------------------------------
     This contains all the scripts for testing
@@ -19,12 +19,13 @@ items, shelves = read_map_data('qvBox-warehouse-data-s23-v01.txt')
     --------------------------------------------------------"""""
 
 worker = Worker(0, 0)
+destination = (5, 6)
 """-------------------------------------------------------- 
    Test cases:
 --------------------------------------------------------"""
 # (4, 0)2176620,2176619,2176621  (4,4)2620261, 2620841, (2,4)2625240, 2629382, 2625159, (1,4)1258916
 # (2, 16) 6456, (8,0) 21710
-target_list_x = [342706, 76283, 286457]
+target_list_x = [2176620, 2620261, 2625240]
 target_list_0 = [2176620, 2620261]
 target_list_1 = [108335]
 target_list_2 = [108335, 391825, 340367, 286457, 661741]
@@ -53,7 +54,7 @@ def find_item_id(x, y):
 for i in range(test_size):
     single_block_list.append(1)
 
-test_case = target_list_3  # change this to test different cases
+test_case = target_list_5  # change this to test different cases
 
 """-------------------------------------------------------- 
    Data initialization should be written below
@@ -65,7 +66,8 @@ for item_id in test_case:
     if item_id in items_map:
         targets.append(items_map[item_id])
 
-map_data = MapData(worker, shelves, items, targets)
+map_data = MapData(worker, shelves, items, targets, destination)
+# map_data = MapData(worker, shelves, items, targets)
 grid = Map(map_data)
 """--------------------------------------------------------
     All the test for algorithm should be written below
@@ -84,8 +86,9 @@ grid = Map(map_data)
 
 """ Test TSP algorithm """
 grid.init_for_tsp()
-grid.tsp()
-# path, path_description = grid.tsp("nearest_neighbor_iterate")
+# grid.print_map()
+# grid.tsp()
+path, path_description = grid.tsp("nearest_neighbor")
 
 # path, path_description = grid.tsp()
 
@@ -97,9 +100,9 @@ grid.tsp()
 # grid.dump_instruction_into_file()
 """ Test the render screen """
 # waiting = waiting()
-# render = RenderScreen(waiting)
+# render = RenderScreen(spinner)
 # render.start()
-# sleep(10)
+# sleep(5)
 # render.stop()
 # render = RenderScreen(grid.print_map_single_search)
 # render = RenderScreen(grid.print_map_tsp)

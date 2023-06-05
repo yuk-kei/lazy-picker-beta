@@ -107,6 +107,7 @@ class Map:
         self.algorithm_type = map_data.algorithm
         self.time_limit = map_data.time_limit
         self.access_mode = map_data.access_mode
+        self.destination = map_data.destination
 
         # All the map component are down here, use this to implement the algorithm
         self.grid = [[Block(i, j) for j in range(self.map_col)] for i in range(self.map_row)]
@@ -123,12 +124,16 @@ class Map:
         self.total_path = []
         self.total_path_description = []
         self.target_blocks = []
+        self.destination_block = None
 
         for i in range(self.map_row):
             for j in range(self.map_col):
                 if self.grid[i][j].pos == self.worker.pos:
                     self.grid[i][j].state = NodeState.START
                     self.start_block = self.grid[i][j]  # ! start_block
+
+                elif self.destination is not None and self.grid[i][j].pos == self.destination:
+                    self.destination_block = self.grid[i][j]  # ! destination_block
 
                 elif self.grid[i][j].pos in list(map(lambda x: x.pos, self.target_shelves)):
                     self.grid[i][j].state = NodeState.TARGET
@@ -137,6 +142,7 @@ class Map:
 
                 elif self.grid[i][j].pos in list(map(lambda x: x.pos, self.shelves)):
                     self.grid[i][j].state = NodeState.BLOCK
+
                 else:
                     self.grid[i][j].state = NodeState.NEW
 
@@ -225,6 +231,7 @@ class Map:
         start = Vertex(self.start_block, 0)
         entrances.append(start)
 
+        # Add all entrances to the vertexes list
         for node in self.target_blocks:
             # print(node)
             if self.access_mode == "single":
@@ -238,6 +245,12 @@ class Map:
                         index += 1
                         entrance = Vertex(block, index, node)
                         entrances.append(entrance)
+
+        # If the destination is not None, add it to the vertexes list
+        if self.destination_block is not None:
+            index += 1
+            destination = Vertex(self.destination_block, index)
+            entrances.append(destination)
         return entrances
 
     def set_adjacency_map(self, all_path_nodes):
@@ -250,8 +263,8 @@ class Map:
         adjacency_map = [[None] * n for _ in range(n)]
         for i in range(len(all_path_nodes)):
             for j in range(len(all_path_nodes)):
-                # if i != j and all_path_nodes[i].is_entrance_of != all_path_nodes[j].is_entrance_of:
-                if i != j:
+                if i != j and all_path_nodes[i].is_entrance_of != all_path_nodes[j].is_entrance_of:
+
                     path = self.find_single_target(all_path_nodes[i].block, all_path_nodes[j].block)
                     # print(all_path_nodes[i].block.pos, all_path_nodes[j].block.pos)
                     path_description = set_path_description(path)
@@ -263,6 +276,8 @@ class Map:
                     edge = None
 
                 adjacency_map[i][j] = edge
+        if self.destination_block is not None:
+            adjacency_map[-1][0] = Edge(all_path_nodes[-1], all_path_nodes[0], [], ["Destination is reached!"])
         self.reset_map()
         return adjacency_map
 
@@ -273,17 +288,23 @@ class Map:
         :return: The total path, the total path description and the total length.
         """
         # self.init_for_tsp()
+        if self.destination_block is not None:
+            size = len(self.target_blocks) + 2
+        else:
+            size = len(self.target_blocks) + 1
+
         if algorithm == "branch_and_bound":
-            branch_and_bound = Branch_n_Bound(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1,self.time_limit)
+
+            branch_and_bound = Branch_n_Bound(self.adjacency_map, self.all_target_nodes, size, limit_time=self.time_limit, destination=self.destination)
             branch_and_bound.set_matrix()
             self.total_path, self.total_path_description, self.total_length = branch_and_bound.solve()
 
         elif algorithm == "nearest_neighbor":
-            dummy_greedy = NearestNeighbor(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1)
+            dummy_greedy = NearestNeighbor(self.adjacency_map, self.all_target_nodes, size)
             self.total_path, self.total_path_description, self.total_length = dummy_greedy.solver()
 
         elif algorithm == "nearest_neighbor_iterate":
-            dummy_greedy = NearestNeighbor(self.adjacency_map, self.all_target_nodes, len(self.target_blocks) + 1)
+            dummy_greedy = NearestNeighbor(self.adjacency_map, self.all_target_nodes, size)
             # self.total_path, self.total_path_description, self.total_length = dummy_greedy.solver()
 
             curr_vertex = dummy_greedy.choose_first_vertex()

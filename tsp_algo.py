@@ -81,15 +81,13 @@ def print_matrix(matrix):
         print()
 
 
-
-
-
 class Branch_n_Bound:
     """
     Branch and bound algorithm to find the shortest path
     """
 
-    def __init__(self, adjacent_map, vertexes, size, limit_time=60, is_limit_time=True,destination=None):
+    def __init__(self, adjacent_map, vertexes, size, limit_time=60, is_limit_time=False, destination=None,
+                 is_debug=True):
 
         self.adjacent_map = adjacent_map
         self.vertexes = vertexes
@@ -98,20 +96,37 @@ class Branch_n_Bound:
         self.limit_time = limit_time
         self.is_limit_time = is_limit_time
         self.size = size
-        self.has_destination = destination is not None
         self.destination = destination
+        self.is_debug = is_debug
         self.pq = PriorityQueue()
         self.same_target = {}
+        self.is_entrance_of_index = {}
         self.result = []
         # Set up the index mapping to the same target vertexes
         for i in range(self.nums_of_vertexes):
             curr_vertex = set()
 
             for j in range(self.nums_of_vertexes):
-                if i != j and vertexes[i].is_entrance_of == vertexes[j].is_entrance_of:
+                if i != j and vertexes[i].is_entrance_of is not None \
+                        and vertexes[i].is_entrance_of == vertexes[j].is_entrance_of:
                     curr_vertex.add(j)
             self.same_target[i] = curr_vertex
             # print(i, " ", curr_vertex)
+
+        # Set up the index mapping to the same target vertexes
+        node_index = 0
+        self.is_entrance_of_index[0] = node_index
+        pre_target_block = vertexes[0].is_entrance_of
+        for i in range(1, len(vertexes)):
+            curr_target_block = vertexes[i].is_entrance_of
+            if curr_target_block is None:
+                self.is_entrance_of_index[i] = node_index
+            elif curr_target_block != pre_target_block:
+                node_index += 1
+                self.is_entrance_of_index[i] = node_index
+            else:
+                self.is_entrance_of_index[i] = node_index
+            pre_target_block = curr_target_block
 
     def set_matrix(self):
         """
@@ -128,8 +143,10 @@ class Branch_n_Bound:
                     self.matrix[i][j] = float("inf")
                 else:
                     self.matrix[i][j] = self.adjacent_map[i][j].weight
-        print("Original matrix: ")
-        print_matrix(self.matrix)
+
+        if self.is_debug:
+            print("Original matrix: ")
+            print_matrix(self.matrix)
 
     def solve(self):
         """
@@ -181,17 +198,18 @@ class Branch_n_Bound:
             # if all(curr_node.visited):
             if curr_node.len == self.size:
                 # print("Success!")
-                # print("Path: ")
-                # for vertex in curr_node.path:
-                #     print(vertex.block, end=" ")
-                print("start_index: ", self.vertexes[random_index].block)
+                if self.is_debug:
+                    print("size of the path:", self.size)
+                    print("Path: ")
+                    for vertex in curr_node.path:
+                        print(vertex.block, end=" ")
+                    print("start_index: ", self.vertexes[random_index].block)
 
                 return self.generate_result(curr_node)
 
-            elif self.has_destination and curr_node.len == self.size - 1:
-
-                return self.generate_result_with_destination(curr_node, self.destination)
-
+            # elif self.has_destination and curr_node.len == self.size - 1:
+            #
+            #     return self.generate_result_with_destination(curr_node, self.destination)
 
             # set the limit time, which default is 60 seconds, stop the algorithm and return a result
             if self.is_limit_time and self.limit_time and curr_time - start_time > self.limit_time:
@@ -218,60 +236,82 @@ class Branch_n_Bound:
                     new_matrix = copy.deepcopy(curr_node.matrix)
 
                     next_node = PathTreeNode(next_vertex, self.nums_of_vertexes, curr_node.cost, curr_node)
+
                     self.reduce_matrix(new_matrix, next_node)
 
+                    if next_node.len == self.size:
+                        final_value = next_node.matrix[index][next_node.first_index]
+                        if final_value != float("inf"):
+                            next_node.cost += final_value
+
                     self.pq.put(next_node)
-
-
-
 
     def reduce_matrix(self, matrix, curr_tree_node):
         """
         Reduce Matrix (rows & columns to at least one 0) = reduced cost
-        1. If it is not the root node, reduce the matrix by pre to curr
-        2. Set the same target row and column to infinity
-        2. Reduce the matrix by finding the minimum value in each row and subtracting it from each element of that row
-        3. Set the visited vertex to True
-        4. Set the same target vertex to True
+        1. Mark the current entrance node and the same target entrance node as visited
+        2. If it is a root node,
+            2.1 Set the vertex of same target nodes' row and column to infinity
+            2.2 Reduce the matrix to get the main reduced cost
+        3. Else, the main reduced cost is the parent's main reduced cost
+            3.1 get the matrix[pre_index][curr_index] the value as reduction
+            3.2 reduce the matrix to get the reduced cost
+            3.3 set the current node's cost to the parent's cost + reduction + reduced cost
         """
 
-        # input("Press Enter to continue...")
         curr_vertex = curr_tree_node.vertex
         curr_index = curr_vertex.index
+
+        # Mark the current entrance node and the same target entrance node as visited
         curr_tree_node.visited[curr_index] = True
-        self.ignore_same_target_entrance(curr_index, curr_tree_node, matrix)
+        for index in self.same_target[curr_index]:
+            curr_tree_node.visited[index] = True
+
         # if curr_tree_node.parent is None: it is a root node
         if curr_tree_node.parent is None:
 
-            print()
-            print("root matrix: ", curr_index)
-            reduce_cost, matrix = self.reduce_row_n_col(matrix)
+            if self.is_debug:
+                print()
+                print("root matrix of index: ", curr_index)
+                print("curr_node: ", curr_vertex.block)
+
+            # Set the vertex of same target nodes' row and column to infinity
+            for index in self.same_target[curr_index]:
+                print("same index with: ", curr_index, " index:", index)
+                for i in range(len(matrix)):
+                    matrix[i][index] = float("inf")
+
+                for j in range(len(matrix)):
+                    matrix[index][j] = float("inf")
+
+            #  Reduce the matrix to get the main reduced cost
+            reduce_cost, matrix = self.reduce_each_row_n_col(matrix)
+
             curr_tree_node.cost = reduce_cost
-            print_matrix(matrix)
-            # ignore the entrance with same target as current vertex
 
         else:
             # if it is not the root node
-            # input("Press Enter to continue...")
+
             parent = curr_tree_node.parent
             pre_vertex = parent.vertex
             pre_index = pre_vertex.index
-            first_index = curr_tree_node.first_index
 
-            print("parent matrix: ", )
-            print("pre_index: ", pre_index, "-> curr_index: ", curr_index)
-            print_matrix(parent.matrix)
+            if self.is_debug:
+                print("parent matrix: ", )
+                print("pre_index: ", pre_index, "-> curr_index: ", curr_index)
+                print_matrix(parent.matrix)
 
             # reduce_cost, matrix = self.reduce_row_n_col(matrix)
 
             main_reduce_cost = parent.cost
             reduction = matrix[pre_index][curr_index]
 
-            for vertex in curr_tree_node.path:
-                print(vertex.block, end=" -> ")
+            if self.is_debug:
+                for vertex in curr_tree_node.path:
+                    print(vertex.block, end=" -> ")
 
-            print("main reduce cost: ", main_reduce_cost)
-            print("reduction: ", reduction)
+                print("main reduce cost: ", main_reduce_cost)
+                print("reduction: ", reduction)
 
             # delete the row of the pre_vertex
             for j in range(len(matrix)):
@@ -280,110 +320,170 @@ class Branch_n_Bound:
             for i in range(len(matrix)):
                 matrix[i][curr_index] = float("inf")
 
-            matrix[curr_index][first_index] = float("inf")
+            self.ignore_same_target_entrance(pre_index, curr_index, matrix)
 
-            reduce_cost, matrix = self.reduce_row_n_col(matrix)
-
+            # reduce_cost, matrix = self.reduce_row_n_col(matrix)
+            reduce_cost, matrix = self.reduce_each_row_n_col(matrix)
             curr_tree_node.cost += reduction
             curr_tree_node.cost += reduce_cost
 
-            print()
-            print("curr_matrix: ")
-            print_matrix(matrix)
-            print("current length: ", curr_tree_node.len, "total size: ", self.size)
-            print()
-            print("curr_vertex: ", curr_vertex.block)
+            if self.is_debug:
+                print()
+                print("curr_matrix: ")
+                print_matrix(matrix)
+                print("current length: ", curr_tree_node.len, "total size: ", self.size)
+                print()
+                print("curr_vertex: ", curr_vertex.block)
 
-            print("parent_cost: ", parent.cost)
-            print("deduction: (parent, curr)", "(", pre_index, ",", curr_index, ")", " = ", reduction)
-            print("reduce_cost: ", reduce_cost)
-            # print("reduced_cost: ", reduced_cost)
-            print("curr_cost: ", curr_tree_node.cost)
+                print("parent_cost: ", parent.cost)
+                print("deduction: (parent, curr)", "(", pre_index, ",", curr_index, ")", " = ", reduction)
+                print("reduce_cost: ", reduce_cost)
+                # print("reduced_cost: ", reduced_cost)
+                print("curr_cost: ", curr_tree_node.cost)
 
         curr_tree_node.matrix = matrix
-        print("------------------------------------------")
+        if self.is_debug:
+            print("------------------------------------------")
 
-    def ignore_same_target_entrance(self, curr_index, curr_tree_node, matrix):
-        for index in self.same_target[curr_index]:
-            curr_tree_node.visited[index] = True
-            # set the row and column of the same target to inf
-            for i in range(len(matrix)):
-                matrix[i][index] = float("inf")
+    def ignore_same_target_entrance(self, pre_index, curr_index, matrix):
+        for index in self.same_target[pre_index]:
             for j in range(len(matrix)):
                 matrix[index][j] = float("inf")
 
-    def reduce_row_n_col(self, matrix):
+        for index in self.same_target[curr_index]:
+            for i in range(len(matrix)):
+                matrix[i][index] = float("inf")
 
-        print("before reduce row and col: ")
-        print_matrix(matrix)
-        print()
-        print("each row min value: ")
+    def reduce_each_row_n_col(self, matrix):
 
-        reduced_cost = 0
-        for i in range(len(matrix)):
+        if self.is_debug:
+            print("before reduce row and col: ")
+            print_matrix(matrix)
+            print()
+            print("each row min value: ")
 
-            row = matrix[i]
+        reduced_row_cost = 0
+        node_start_row_index = 0
+        node_end_row_index = node_start_row_index + 1
+
+        while node_end_row_index < len(matrix):
+            while node_end_row_index < len(matrix) and self.is_entrance_of_index[node_start_row_index] \
+                    == self.is_entrance_of_index[node_end_row_index]:
+                node_end_row_index += 1
+
+            curr_row_min = float("inf")
+
+            break_outer_loop = False
+            for i in range(node_start_row_index, node_end_row_index):
+
+                for j in range(len(matrix)):
+                    # search the min value of each row belongs to the current node
+                    if matrix[i][j] < curr_row_min:
+                        curr_row_min = matrix[i][j]
+                        # if the min value is 0, then break the loop
+                        if curr_row_min == 0:
+                            break_outer_loop = True
+                            break
+
+                if break_outer_loop:
+                    break
+            '''--------------------------------------------'''
+            if self.is_debug:
+                print(curr_row_min, end=" ")
+            '''--------------------------------------------'''
             # get the min value of the row
-            min_value = min(row)
-            print(min_value, end=" ")
-            if min_value == float("inf") or min_value == 0:
-                continue
-
-            else:
+            if curr_row_min != 0 and curr_row_min != float("inf"):
                 # reduce each element of the row by the min value
-                for j in range(len(row)):
-                    if row[j] != float("inf") and row[j] != 0:
-                        row[j] -= min_value
-                matrix[i] = row
-                # get the total cost of each row
-                reduced_cost += min_value
+                for i in range(node_start_row_index, node_end_row_index):
+                    for j in range(len(matrix)):
+                        if matrix[i][j] != float("inf") and matrix[i][j] != 0:
+                            matrix[i][j] -= curr_row_min
 
-        print()
-        print("row_reduced_cost: ", reduced_cost)
-        print()
-        print("each column min value:")
+                reduced_row_cost += curr_row_min
 
-        # reduce column
-        for j in range(len(matrix[0])):
-            column = [row[j] for row in matrix]
-            min_value = min(column)
-            print(min_value, end=" ")
-            if min_value == float("inf") or min_value == 0:
-                continue
-            else:
-                # reduce each element of the column by the min value
-                for i in range(len(column)):
-                    if column[i] != float("inf") and column[i] != 0:
-                        column[i] -= min_value
+            node_start_row_index = node_end_row_index
+
+        if self.is_debug:
+            print()
+            print("row_reduced_cost: ", reduced_row_cost)
+            print()
+            print("each column min value:")
+
+        # reduced_col_cost = 0
+        node_start_col_index = 0
+        reduced_col_cost = 0
+        node_end_col_index = node_start_col_index + 1
+        while node_end_col_index < len(matrix):
+            while node_end_col_index < len(matrix) and self.is_entrance_of_index[node_start_col_index] == \
+                    self.is_entrance_of_index[node_end_col_index]:
+                node_end_col_index += 1
+
+            curr_col_min = float("inf")
+
+            break_outer_loop = False
+            for j in range(node_start_col_index, node_end_col_index):
                 for i in range(len(matrix)):
-                    matrix[i][j] = column[i]
-                reduced_cost += min_value
+                    # search the min value of each column belongs to the current node
+                    if matrix[i][j] < curr_col_min:
+                        curr_col_min = matrix[i][j]
+                        # if the min value is 0, then break the loop
+                        if curr_col_min == 0:
+                            break_outer_loop = True
+                            break
 
-        print()
-        print("total_reduced_cost: ", reduced_cost)
-        print()
-        print("after reduce row and col: ")
-        print_matrix(matrix)
-        print()
+                if break_outer_loop:
+                    break
 
-        return reduced_cost, matrix
+            """--------------------------------------------"""
+            if self.is_debug:
+                print(curr_col_min, end=" ")
+            """--------------------------------------------"""
+
+            # get the min value of the column
+            if curr_col_min != 0 and curr_col_min != float("inf"):
+                # reduce each element of the column by the min value
+                for j in range(node_start_col_index, node_end_col_index):
+                    for i in range(len(matrix)):
+                        if matrix[i][j] != float("inf") and matrix[i][j] != 0:
+                            matrix[i][j] -= curr_col_min
+
+                reduced_col_cost += curr_col_min
+            node_start_col_index = node_end_col_index
+
+        total_reduced_cost = reduced_row_cost + reduced_col_cost
+        if self.is_debug:
+            print()
+            print("col_reduced_cost: ", reduced_col_cost)
+            print("total_reduced_cost: ", total_reduced_cost)
+            print()
+            print("after reduce row and col: ")
+            print_matrix(matrix)
+            print()
+
+        return total_reduced_cost, matrix
 
     def generate_result(self, curr_node):
         """
-        Generate the result
-        """
+        Generate the result of the TSP problem by the final node of the tree
 
-        print("curr_node: ", curr_node.vertex.block)
-        print("curr_node matrix: ")
-        print_matrix(curr_node.matrix)
-        print("curr_node cost: ", curr_node.cost)
-        print("curr_node path: ")
-        for vertex in curr_node.path:
-            print(vertex.block, end=" -> ")
-        print()
+        :param curr_node: the current node
+        :return: the final path
+        """
         path_vertexes = curr_node.path
-        print("start_index: ", path_vertexes[0].index)
-        print("start block: ", path_vertexes[0].block)
+
+        if self.is_debug:
+            print("curr_node: ", curr_node.vertex.block)
+            print("curr_node matrix: ")
+            print_matrix(curr_node.matrix)
+            print("curr_node cost: ", curr_node.cost)
+            print("curr_node path: ")
+            for vertex in curr_node.path:
+                print(vertex.block, end=" -> ")
+            print()
+
+            print("start_index: ", path_vertexes[0].index)
+            print("start block: ", path_vertexes[0].block)
+
         final_path = []
         final_path_description = []
         total_cost = 0
@@ -419,43 +519,12 @@ class Branch_n_Bound:
         final_path[-1].state = NodeState.START
         return final_path, final_path_description, total_cost
 
-    def generate_result_with_destination(self, curr_node, destination):
-        """
-        Generate the result with destination
-        :param curr_node: The current node
-        :param destination: The destination
-        :return: The result
-        """
-
-        final_path = []
-        final_path_description = []
-        total_cost = 0
-        curr_vertex = curr_node.vertex
-        path_vertexes = curr_node.path
-        for i in range(0, len(path_vertexes) - 1):
-            curr_index = i + 1
-            self.result.append(self.adjacent_map[path_vertexes[i].index][path_vertexes[curr_index].index])
-
-        self.result.append(self.adjacent_map[curr_vertex.index][destination.index])
-
-        for edge in self.result:
-            if len(edge.path) == 0:
-                continue
-            edge.path[0].state = NodeState.STOP
-            total_cost += edge.weight
-            for i in range(1, len(edge.path)):
-                if edge.path[i].state == NodeState.STOP:
-                    continue
-
-                edge.path[i].state = NodeState.PATH
-
-            final_path += edge.path
-            final_path_description.append(edge.path_description)
-        final_path[-1].state = NodeState.START
-        return final_path, final_path_description, total_cost
-
 
 def color_edge(edge):
+    """
+    Color the edges
+    :param edge: The edge
+    """
     edge.path[0].state = NodeState.STOP
     for j in range(1, len(edge.path)):
         if edge.path[j].state == NodeState.STOP:
@@ -469,7 +538,7 @@ class NearestNeighbor:
     A dummy greedy algorithm to find the nearest vertex to the current vertex for every step
     """
 
-    def __init__(self, adjacent_map, vertexes, size):
+    def __init__(self, adjacent_map, vertexes, size, destination=None):
 
         self.adjacent_map = adjacent_map
         self.vertexes = vertexes
@@ -479,16 +548,23 @@ class NearestNeighbor:
         self.same_target = {}
         self.visited = [False] * self.nums_of_vertexes
         self.result = []
+        self.destination = destination
+        self.destination_index = self.nums_of_vertexes - 1
         # print("Failed to find the optimal solution, using greedy algorithm instead")
         for i in range(self.nums_of_vertexes):
             curr_vertex = set()
 
             for j in range(self.nums_of_vertexes):
-                if i != j and vertexes[i].is_entrance_of == vertexes[j].is_entrance_of:
+                if i != j and vertexes[i].is_entrance_of is not None \
+                        and vertexes[i].is_entrance_of == vertexes[j].is_entrance_of:
                     curr_vertex.add(j)
             self.same_target[i] = curr_vertex
 
     def choose_first_vertex(self):
+        """
+        Choose the first vertex randomly
+        :return: The first vertex
+        """
 
         if self.nums_of_vertexes > 1:
             self.start_index = random.randint(0, self.nums_of_vertexes - 1)
@@ -499,14 +575,103 @@ class NearestNeighbor:
         return curr_vertex
 
     def solver(self):
-
+        """
+        Solve the problem using the nearest neighbor algorithm
+        :return: the result path, path description and total cost
+        """
         # start from a random vertex
         curr_vertex = self.choose_first_vertex()
 
         self.backtrack(curr_vertex)
         return self.generate_result()
 
+    def backtrack(self, curr_vertex):
+        """
+        Backtrack the algorithm
+
+        :param curr_vertex: The current vertex
+        """
+        # End condition, if the result is the size of the vertexes, then we have found the path
+        if len(self.result) == self.size - 1:
+            final_edge = self.adjacent_map[curr_vertex.index][self.start_index]
+            self.result.append(final_edge)
+            return
+
+        curr_index = curr_vertex.index
+        self.visited[curr_index] = True
+        for index in self.same_target[curr_index]:
+            self.visited[index] = True
+
+        # Find the nearest vertex
+        next_min = float("inf")
+        min_edge = None
+        min_index = 0
+        # If there is a destination, then we need to ensure that the start and the destination are connected
+        if self.destination is not None:
+            if curr_index == self.destination_index:
+                min_edge = self.adjacent_map[curr_index][0]
+                min_index = 0
+            else:
+                for i in range(self.nums_of_vertexes):
+                    if self.visited[i]:
+                        continue
+                    edge = self.adjacent_map[curr_index][i]
+                    if i != 0 and edge is not None and edge.weight < next_min:
+                        next_min = edge.weight
+                        min_edge = edge
+                        min_index = i
+        # If there is no destination, then we can choose the nearest vertex
+        else:
+            for i in range(self.nums_of_vertexes):
+                if self.visited[i]:
+                    continue
+                edge = self.adjacent_map[curr_index][i]
+                if edge is not None and edge.weight < next_min:
+                    next_min = edge.weight
+                    min_edge = edge
+                    min_index = i
+
+        if min_edge is None:
+            print("Error: ", curr_index, min_index, len(self.result), self.size)
+            print(self.visited)
+            for i in range(len(self.result)):
+                print("(", self.result[i].node1.block, self.result[i].node2.block, ")" + "->", end="")
+            print()
+            self.print_adjacent_map()
+            input()
+        self.result.append(min_edge)
+        self.backtrack(self.vertexes[min_index])
+
+    def generate_result(self):
+        """
+        Generate the result path
+        :return: the result path, path description and total cost
+        """
+        final_path = []
+        final_path_description = []
+        total_cost = 0
+
+        start_index = 0
+        for i in range(len(self.result)):
+            if self.result[i] is None:
+                print(i, len(self.result), self.size)
+            if self.result[i].node1.index == 0:
+                start_index = i
+                # print(path_vertexes[i].block)
+                break
+
+        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description,
+                                                                             total_cost, len(self.result), start_index)
+        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description,
+                                                                             total_cost, start_index)
+
+        return final_path, final_path_description, total_cost
+
     def iterate(self, curr_vertex):
+        """
+        Iterate each step of the algorithm
+        :param curr_vertex: The current vertex
+        """
 
         curr_index = curr_vertex.index
         # find an edge with the minimum weight
@@ -529,28 +694,6 @@ class NearestNeighbor:
 
         return self.vertexes[min_index], min_edge
 
-    def backtrack(self, curr_vertex):
-
-        if len(self.result) == self.size - 1:
-            self.result.append(self.adjacent_map[curr_vertex.index][self.start_index])
-            return
-
-        curr_index = curr_vertex.index
-        self.visited[curr_index] = True
-        for index in self.same_target[curr_index]:
-            self.visited[index] = True
-
-        next_min = float("inf")
-        min_edge = None
-        min_index = 0
-        for (i, edge) in enumerate(self.adjacent_map[curr_index]):
-            if edge is not None and edge.weight < next_min and not self.visited[i]:
-                next_min = edge.weight
-                min_edge = edge
-                min_index = i
-        self.result.append(min_edge)
-        self.backtrack(self.vertexes[min_index])
-
     def generate_path(self):
         final_path = []
         final_path_description = []
@@ -561,37 +704,30 @@ class NearestNeighbor:
         final_path[-1].state = NodeState.START
         return final_path, final_path_description, total_cost
 
-    def generate_result(self):
-        """
-        Generate the result
-        """
-        final_path = []
-        final_path_description = []
-        total_cost = 0
-
-        start_index = 0
-        for i in range(len(self.result)):
-            if self.result[i].node1.index == 0:
-                start_index = i
-                # print(path_vertexes[i].block)
-                break
-
-        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description,
-                                                                             total_cost, len(self.result), start_index)
-        final_path, total_cost, final_path_description = self.construct_path(final_path, final_path_description,
-                                                                             total_cost, start_index)
-
-        return final_path, final_path_description, total_cost
-
     def construct_path(self, final_path, final_path_description, total_cost, end_index, start_index=0):
         for i in range(start_index, end_index):
             edge = self.result[i]
-            edge.path[-1].state = NodeState.STOP
-            total_cost += edge.weight
-            color_edge(edge)
+            if edge is not None and edge.path is not None and len(edge.path) > 0:
+                edge.path[-1].state = NodeState.STOP
+                total_cost += edge.weight
+                color_edge(edge)
 
-            final_path += edge.path
-            final_path_description.append(edge.path_description)
+                final_path += edge.path
+                final_path_description.append(edge.path_description)
+
         return final_path, total_cost, final_path_description
 
-    # def debug(self):
+    def print_adjacent_map(self):
+        for i in range(self.nums_of_vertexes):
+            for j in range(self.nums_of_vertexes):
+                if self.adjacent_map[i][j] is not None:
+                    if self.adjacent_map[i][j].weight < 10:
+                        print(self.adjacent_map[i][j].weight, end="   ")
+
+                    else:
+                        print(self.adjacent_map[i][j].weight, end="  ")
+                else:
+                    print("inf", end=" ")
+            print()
+
+        print()

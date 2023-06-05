@@ -99,6 +99,7 @@ class NodeState(Enum):
     2: OPEN, represents a node in the open list(will be visited in the future);
     3: BLOCK, represents a node that is a shelf; 4: PATH, represents a node that is in the path to the target node;
     5: CLOSE, represents a node that has been visited; 6: START, represents the starting node(worker start position)
+    7: STOP, represents the access point of the shelf
     """
 
     TARGET = 0
