@@ -25,7 +25,7 @@ destination = (30, 19)
 --------------------------------------------------------"""
 # (4, 0)2176620,2176619,2176621  (4,4)2620261, 2620841, (2,4)2625240, 2629382, 2625159, (1,4)1258916
 # (2, 16) 6456, (8,0) 21710
-target_list_x = [2176620, 2620261, 2625240]
+target_list_x = [21710, 6456, 1258916, 2176620, 2620261, 2625240]
 target_list_0 = [2176620, 2620261]
 target_list_1 = [108335]
 target_list_2 = [108335, 391825, 340367, 286457, 661741]
@@ -54,7 +54,7 @@ def find_item_id(x, y):
 for i in range(test_size):
     single_block_list.append(1)
 
-test_case = target_list_4  # change this to test different cases
+test_case = target_list_3  # change this to test different cases
 
 """-------------------------------------------------------- 
    Data initialization should be written below
@@ -68,7 +68,7 @@ for item_id in test_case:
 
 # tsp_algo = 'nearest_neighbor'
 tsp_algo = "branch_and_bound"
-map_data = MapData(worker, shelves, items, targets, destination=None, time_limit=20, tsp_algo=tsp_algo)
+map_data = MapData(worker, shelves, items, targets, destination=None, time_limit=60, tsp_algo=tsp_algo, is_debug=False)
 # map_data = MapData(worker, shelves, items, targets)
 grid = Map(map_data)
 """--------------------------------------------------------

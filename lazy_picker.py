@@ -548,7 +548,7 @@ def setting(map_data):
     while True:
         print("-----------------------------------------------------------------------------")
         print("Welcome to the setting menu!")
-        print("Please enter '1' to set a new target item, '2' to set a new start point, ")
+        print("Please enter '1' to set a new order of target items, '2' to set a new start point, ")
         print("'3' to set a new destination, '4' to set a new access mode, 5 to set a new algorithm for tsp")
         print("'6' to set a new time limit, '7' to set a debug mode, '8' to set a point to point base algorithm")
         print("'r' to return to the main menu")
@@ -583,8 +583,10 @@ def setting(map_data):
             map_data.update("is_debug", new_debug_mode)
 
         elif choice == "8":
-            algo = input("Please enter the algorithm you want to use for calculating point to point:"
-                         " 1. A* 2. BFS 3. Dijkstra 4. DFS")
+            print("-----------------------------------------------------------------------------")
+            print("Please enter the algorithm you want to use for calculating point to point:"
+                  " 1. A* 2. BFS 3. Dijkstra 4. DFS")
+            algo = input()
             if algo == "1":
                 map_data.update("algorithm", Algorithm.A_STAR)
             elif algo == "2":

@@ -216,29 +216,44 @@ class Branch_n_Bound:
             # set the limit time, which default is 60 seconds, stop the algorithm and return a result
 
             if self.is_limit_time and self.limit_time and curr_time - start_time > self.limit_time:
+                # If we want to return a more decent result, we can use the following code """
+                # --------------------------------------------------------------------------------"""
+                # # If it needs a destination, return the nearest neighbor result
+                # if self.destination is not None:
+                #     total_path, total_path_description, total_length = \
+                #         NearestNeighbor(self.adjacent_map, self.vertexes, self.size, self.destination).solver()
+                #     return True, total_path, total_path_description, total_length
+                #
+                # # Else, return the current best result
+                # max_node = parent_node
+                # while not self.pq.empty():
+                #     temp_node = self.pq.get()
+                #     if max_node.len < temp_node.len:
+                #         max_node = temp_node
+                #
+                # for index in range(self.nums_of_vertexes):
+                #     if not max_node.visited[index]:
+                #         next_vertex = self.vertexes[index]
+                #         new_matrix = copy.deepcopy(max_node.matrix)
+                #         next_node = PathTreeNode(next_vertex, self.nums_of_vertexes, max_node.cost, max_node)
+                #         self.reduce_matrix(new_matrix, next_node)
+                #         max_node = next_node
 
-                # If it needs a destination, return the nearest neighbor result
-                if self.destination is not None:
-                    total_path, total_path_description, total_length = \
-                        NearestNeighbor(self.adjacent_map, self.vertexes, self.size, self.destination).solver()
-                    return True, total_path, total_path_description, total_length
-
-                # Else, return the current best result
-                max_node = parent_node
-                while not self.pq.empty():
-                    temp_node = self.pq.get()
-                    if max_node.len < temp_node.len:
-                        max_node = temp_node
-
+                # total_path, total_path_description, total_length = self.generate_result(max_node)
+                # --------------------------------------------------------------------------------
+                org_path = []
+                visited = [False for i in range(self.nums_of_vertexes)]
                 for index in range(self.nums_of_vertexes):
-                    if not max_node.visited[index]:
-                        next_vertex = self.vertexes[index]
-                        new_matrix = copy.deepcopy(max_node.matrix)
-                        next_node = PathTreeNode(next_vertex, self.nums_of_vertexes, max_node.cost, max_node)
-                        self.reduce_matrix(new_matrix, next_node)
-                        max_node = next_node
-
-                total_path, total_path_description, total_length = self.generate_result(max_node)
+                    if not visited[index]:
+                        org_path.append(self.vertexes[index])
+                        for other_index in self.same_target[index]:
+                            visited[other_index] = True
+                final_vertex = None
+                if self.nums_of_vertexes != 0:
+                    final_vertex = self.vertexes[self.nums_of_vertexes - 1]
+                org_node = PathTreeNode(final_vertex, self.nums_of_vertexes)
+                org_node.path = org_path
+                total_path, total_path_description, total_length = self.generate_result(org_node)
                 return True, total_path, total_path_description, total_length
 
             pre_node = None

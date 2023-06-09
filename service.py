@@ -138,16 +138,24 @@ class Map:
                 elif self.destination is not None and self.grid[i][j].pos == self.destination:
                     self.destination_block = self.grid[i][j]  # ! destination_block
 
-                elif self.grid[i][j].pos in list(map(lambda x: x.pos, self.target_shelves)):
-                    self.grid[i][j].state = NodeState.TARGET
-                    self.target_blocks.append(self.grid[i][j])  # ! target_block
-                #     self.target_block = self.grid[i][j]  # ! target_block
+                # elif self.grid[i][j].pos in list(map(lambda x: x.pos, self.target_shelves)):
+                #     self.grid[i][j].state = NodeState.TARGET
+                #     self.target_blocks.append(self.grid[i][j])  # ! target_block
+                # #     self.target_block = self.grid[i][j]  # ! target_block
 
                 elif self.grid[i][j].pos in list(map(lambda x: x.pos, self.shelves)):
                     self.grid[i][j].state = NodeState.BLOCK
 
                 else:
                     self.grid[i][j].state = NodeState.NEW
+
+        temp_set = set()
+        for item in self.targets:
+            pos = item.pos
+            if pos not in temp_set:
+                temp_set.add(pos)
+                self.target_blocks.append(self.grid[pos[0]][pos[1]])
+                self.grid[pos[0]][pos[1]].state = NodeState.TARGET
 
         self.current_block = self.start_block
         self.org_grid = copy.deepcopy(self.grid)
@@ -318,7 +326,8 @@ class Map:
         if time_is_up:
             print()
             print("Time is up! Failed to find a optimal solution within " + str(self.time_limit) + " seconds.")
-            print("Returning what we have now...")
+            print("Returning the original order of items now...")
+            # print("Returning what we have now...")
             print()
         print_path_descriptions(self.total_path_description, self.total_length)
         print("If you want to dump the result to a .txt file, press 'd', press other keys and enter to continue.")
@@ -716,8 +725,9 @@ class Map:
                 print(i - 1, end=" ")
         print()
         print()
-        print("'\U0001F680': is the start point, '\U0001F3AF': is the target item, '\U0001F7E9' is the path, "
-              "'\U0001F6AA' is the shelf location, '\U0001F518' is the empty space , '\U0001F535' is the entry point")
+        print("'\U0001F680': is the start point, (destination as well if any)'\U0001F3AF': is the target item, "
+              "'\U0001F7E9' is the path, '\U0001F6AA' is the shelf location, '\U0001F518' is the empty space , "
+              "'\U0001F535' is the entry point")
 
     def dump_instruction_into_file(self):
         """A function to dump the instruction into a file.
