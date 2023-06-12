@@ -7,6 +7,9 @@ from data import NodeState
 
 
 class Edge:
+    """
+    This class represents an edge between two vertexes
+    """
     def __init__(self, node1, node2, path, path_description):
         self.node1 = node1
         self.node2 = node2
@@ -23,9 +26,11 @@ class Edge:
 
 
 class Vertex:
+    """
+    This class represents a vertex in the adjacent map
+    """
     def __init__(self, node, index, is_entrance_of=None):
         self.block = node
-        self.level = 0
         self.is_entrance_of = is_entrance_of
         self.index = index
 
@@ -154,14 +159,19 @@ class Branch_n_Bound:
         Solve the problem with branch and bound algorithm
         1. Select a random vertex as the root
         2. set the other entrance with the same target to infinity
-        2. Reduce the matrix
-        3. Put the root into the priority queue
-        4. While the priority queue is not empty:
-            4.1 Get the node with the smallest cost
-            4.2 If the node is a leaf node:
+        3. Reduce the matrix
+        4. Put the root into the priority queue
+        5. While the priority queue is not empty:
+            5.1 Get the node with the smallest cost
+            5.2 If the node is a leaf node:
                 return the result
-            4.3 Else:
+            5.3 If the time is up:
+                return the original order
+            5.4 Else:
                 Keep reducing the matrix and put the node into the priority queue
+                if the current node is the entrance of a target block as previous node:
+                    set this node's matrix the same as the previous node
+                    update the cost of the node
         """
         start_time = time.time()
         if self.nums_of_vertexes > 1:
@@ -209,10 +219,6 @@ class Branch_n_Bound:
                 total_path, total_path_description, total_length = self.generate_result(parent_node)
                 return False, total_path, total_path_description, total_length
 
-            # elif self.has_destination and curr_node.len == self.size - 1:
-            #
-            #     return self.generate_result_with_destination(curr_node, self.destination)
-
             # set the limit time, which default is 60 seconds, stop the algorithm and return a result
 
             if self.is_limit_time and self.limit_time and curr_time - start_time > self.limit_time:
@@ -241,8 +247,10 @@ class Branch_n_Bound:
 
                 # total_path, total_path_description, total_length = self.generate_result(max_node)
                 # --------------------------------------------------------------------------------
+                # Construct a new node containing the original order of the target vertexes
                 org_path = []
                 visited = [False for i in range(self.nums_of_vertexes)]
+                # Each time we visit an entrance of the vertex, we set all the same target entrance to be visited
                 for index in range(self.nums_of_vertexes):
                     if not visited[index]:
                         org_path.append(self.vertexes[index])
@@ -293,7 +301,6 @@ class Branch_n_Bound:
 
     def reduce_matrix(self, matrix, curr_tree_node):
         """
-        Reduce Matrix (rows & columns to at least one 0) = reduced cost
         1. Mark the current entrance node and the same target entrance node as visited
         2. If it is a root node,
             2.1 Set the vertex of same target nodes' row and column to infinity
@@ -391,6 +398,14 @@ class Branch_n_Bound:
             print("------------------------------------------")
 
     def ignore_same_target_entrance(self, pre_index, curr_index, matrix):
+        """
+        Ignore the same target entrance node in the matrix
+        (Set the row and column of the same target entrance node to infinity)
+
+        :param pre_index: the index of the previous node
+        :param curr_index: the index of the current node
+        :param matrix: the matrix of the current node
+        """
         for index in self.same_target[pre_index]:
             for j in range(len(matrix)):
                 matrix[index][j] = float("inf")
@@ -400,6 +415,18 @@ class Branch_n_Bound:
                 matrix[i][index] = float("inf")
 
     def reduce_each_row_n_col(self, matrix):
+        """
+        Reduce each row and column of the matrix
+        First reduce the row
+            Find the rows that have the same entrance node and find the minimum value of them
+            If the minimum valued is larger than 0, then reduce each value by the minimum value
+        Then reduce the column
+            Find the columns that have the same entrance node and find the minimum value of them
+            If the minimum valued is larger than 0, then reduce each value by the minimum value
+
+        :param matrix: the matrix of the current node
+        :return: the main reduced cost
+        """
 
         if self.is_debug:
             print("before reduce row and col: ")
@@ -568,7 +595,10 @@ class Branch_n_Bound:
 
 def color_edge(edge):
     """
-    Color the edges
+    Color the edge by setting the state of the blocks in the edge
+    if the block is the end block(the entrance point), then set the state to STOP
+    else set the state to PATH
+
     :param edge: The edge
     """
     edge.path[0].state = NodeState.STOP
@@ -622,7 +652,8 @@ class NearestNeighbor:
 
     def solver(self):
         """
-        Solve the problem using the nearest neighbor algorithm
+        Solve the problem using the nearest neighbor algorithm using backtracking
+
         :return: the result path, path description and total cost
         """
         # start from a random vertex
@@ -633,7 +664,10 @@ class NearestNeighbor:
 
     def backtrack(self, curr_vertex):
         """
-        Backtrack the algorithm
+        Backtrack the algorithm, find the nearest vertex and add the edge to the result
+        if the result is the size of the vertexes, then we have found the path
+        else, find the next nearest vertex in the adjacent map a and add the edge to the result
+        keep backtracking
 
         :param curr_vertex: The current vertex
         """

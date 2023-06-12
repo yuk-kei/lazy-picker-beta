@@ -186,6 +186,13 @@ def set_target_id_once(items_map):
 
 
 def get_time_limit():
+    """
+    The get_time_limit function prompts the user to enter a time limit.
+    If the input is not numeric, it will prompt again until a valid number is entered.
+    It then returns the time limit.
+
+    :return: The selected time limit
+    """
     print("-----------------------------------------------------------------------------")
     choice = input("Do you want to change the time limit ? (y/n) Default is 60 seconds" + "\n")
     while True:
@@ -261,7 +268,8 @@ def initialize_data():
     destination = get_destination()
     time_limit = get_time_limit()
     map_data = MapData(worker, shelves, items, targets, time_limit=time_limit, destination=destination)
-
+    if len(targets) >= 15:
+        map_data.update("tsp_algo","nearest_neighbor")
     return map_data
 
 
@@ -463,6 +471,14 @@ def find_path(map_data):
 
 
 def to_be_continue(map_data):
+    """
+    The to_be_continue function allow the user to continue or quit the program.
+    If the user input 'c', it will call the find_path function to continue.
+    If the user input 'q', it will call the display_menu function to quit.
+
+    :param map_data: Pass the original MapData object to the function
+    :return:  the Map service(find path for you)
+    """
     while True:
         key = input('Press c to continue... if you want to quit, press q')
         if key == 'c':
@@ -572,7 +588,7 @@ def setting(map_data):
 
         elif choice == "5":
             new_tsp_algorithm = set_tsp_algorithm()
-            map_data.update("algorithm", new_tsp_algorithm)
+            map_data.update("tsp_algo", new_tsp_algorithm)
 
         elif choice == "6":
             new_time_limit = get_time_limit()

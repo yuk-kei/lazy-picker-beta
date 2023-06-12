@@ -54,7 +54,7 @@ def find_item_id(x, y):
 for i in range(test_size):
     single_block_list.append(1)
 
-test_case = target_list_3  # change this to test different cases
+test_case = target_list_4  # change this to test different cases
 
 """-------------------------------------------------------- 
    Data initialization should be written below
