@@ -21,11 +21,11 @@ Lazy-picker beta is a warehouse program using TSP algorithms.
 
 ### tsp - display：
 
-![case3](imgs\case3.png)
+![case3](imgs/case3.png)
 
 ### tsp - text description：
 
-![case3_text](imgs\case3_text.png)
+![case3_text](imgs/case3_text.png)
 
 ## known bugs/errors
 
