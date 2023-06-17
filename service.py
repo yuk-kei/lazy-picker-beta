@@ -314,9 +314,7 @@ class Map:
             sleep(0.8)
             refresh()
 
-        # incase the rendering is not finished
-
-        # color the path base on the return re
+        # color the path base on the return value of the algorithm
         self.set_total_path_state()
         self.print_map()
         if time_is_up:

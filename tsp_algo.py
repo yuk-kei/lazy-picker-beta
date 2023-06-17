@@ -417,6 +417,7 @@ class Branch_n_Bound:
     def reduce_each_row_n_col(self, matrix):
         """
         Reduce each row and column of the matrix
+        Using two pointers to find the minimum value
         First reduce the row
             Find the rows that have the same entrance node and find the minimum value of them
             If the minimum valued is larger than 0, then reduce each value by the minimum value

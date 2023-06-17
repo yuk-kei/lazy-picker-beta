@@ -68,7 +68,7 @@ for item_id in test_case:
 
 # tsp_algo = 'nearest_neighbor'
 tsp_algo = "branch_and_bound"
-map_data = MapData(worker, shelves, items, targets, destination=None, time_limit=10, tsp_algo=tsp_algo, is_debug=True)
+map_data = MapData(worker, shelves, items, targets, destination=None, time_limit=60, tsp_algo=tsp_algo, is_debug=True)
 # map_data = MapData(worker, shelves, items, targets)
 grid = Map(map_data)
 """--------------------------------------------------------
