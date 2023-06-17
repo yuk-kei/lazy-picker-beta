@@ -261,7 +261,7 @@ def initialize_data():
     :return: A MapData object, which contains all the data needed to create a map
     """
 
-    items, shelves = read_map_data('qvBox-warehouse-data-s23-v01.txt')
+    items, shelves = read_map_data('resource/qvBox-warehouse-data-s23-v01.txt')
 
     targets = set_targets(items)
     worker = get_worker_pos()
@@ -269,7 +269,7 @@ def initialize_data():
     time_limit = get_time_limit()
     map_data = MapData(worker, shelves, items, targets, time_limit=time_limit, destination=destination)
     if len(targets) >= 15:
-        map_data.update("tsp_algo","nearest_neighbor")
+        map_data.update("tsp_algo", "nearest_neighbor")
     return map_data
 
 
@@ -315,7 +315,7 @@ def set_target_from_file(items_map):
     :param items_map: Pass the list of items to the function
     :return: The target item
     """
-    file_path = "qvBox-warehouse-orders-list-part01.txt"
+    file_path = "resource/qvBox-warehouse-orders-list-part01.txt"
     while True:
         try:
             with open(file_path, 'r') as file:

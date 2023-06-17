@@ -169,15 +169,6 @@ class Map:
         self.adjacency_map = None
         self.render = RenderScreen(waiting)
 
-    def init_for_tsp(self):
-        """
-        Initialize the map for the TSP algorithm.
-        First, set all the target nodes.
-        Second, set the adjacency map.
-        """
-        self.all_target_nodes = self.set_target_entrances()
-        self.adjacency_map = self.set_adjacency_map(self.all_target_nodes)
-
     def find_single_target(self, start=None, target=None):
         """
         Find the shortest path to a single target. the algorithm defaults to A*. But you can change it to other algorithms.
@@ -221,6 +212,15 @@ class Map:
         self.iteration = 0
         self.has_path = False
         self.grid = copy.deepcopy(self.org_grid)
+
+    def init_for_tsp(self):
+        """
+        Initialize the map for the TSP algorithm.
+        First, set all the target nodes.
+        Second, set the adjacency map.
+        """
+        self.all_target_nodes = self.set_target_entrances()
+        self.adjacency_map = self.set_adjacency_map(self.all_target_nodes)
 
     def set_target_entrances(self):
         """
@@ -266,11 +266,7 @@ class Map:
                 if i != j and all_path_nodes[i].is_entrance_of != all_path_nodes[j].is_entrance_of:
 
                     path = self.find_single_target(all_path_nodes[i].block, all_path_nodes[j].block)
-                    # print(all_path_nodes[i].block.pos, all_path_nodes[j].block.pos)
                     path_description = set_path_description(path)
-                    # print(path_description[0])
-                    # for sentence in path_description:
-                    #     print(sentence)
                     edge = Edge(all_path_nodes[i], all_path_nodes[j], path, path_description)
                 else:
                     edge = None

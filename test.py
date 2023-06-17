@@ -54,7 +54,7 @@ def find_item_id(x, y):
 for i in range(test_size):
     single_block_list.append(1)
 
-test_case = target_list_4  # change this to test different cases
+test_case = target_list_0 # change this to test different cases
 
 """-------------------------------------------------------- 
    Data initialization should be written below
@@ -68,7 +68,7 @@ for item_id in test_case:
 
 # tsp_algo = 'nearest_neighbor'
 tsp_algo = "branch_and_bound"
-map_data = MapData(worker, shelves, items, targets, destination=None, time_limit=60, tsp_algo=tsp_algo, is_debug=False)
+map_data = MapData(worker, shelves, items, targets, destination=None, time_limit=10, tsp_algo=tsp_algo, is_debug=True)
 # map_data = MapData(worker, shelves, items, targets)
 grid = Map(map_data)
 """--------------------------------------------------------
